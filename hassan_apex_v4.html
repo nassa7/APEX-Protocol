@@ -815,14 +815,14 @@ function setClientIdStatus(msg, color) {
 }
 
 function initGoogleAuth() {
-  const clientId = getClientId();
-  if(!clientId) {
-    document.getElementById('clientIdMissing').classList.add('show');
-    return;
-  }
+  // YOUR HARD-CODED CLIENT ID
+  const clientId = "846809219451-i3jbng379lbfgqad4t25tdesnij11lpq.apps.googleusercontent.com";
+  
+  // Save it to localStorage automatically so the UI recognizes it
+  localStorage.setItem('apex_google_client_id', clientId);
+
   document.getElementById('clientIdMissing').classList.remove('show');
 
-  // Check if we have a valid stored token
   const storedToken = getToken();
   const tokenExp = getTokenExp();
   if(storedToken && Date.now() < tokenExp - 60000) {
@@ -834,8 +834,6 @@ function initGoogleAuth() {
     onSignedIn();
     return;
   }
-
-  // Token expired or missing — try silent refresh via prompt:none
   tryAutoSignIn();
 }
 
