@@ -1,0 +1,15 @@
+{
+  "name": "APEX Protocol",
+  "short_name": "APEX",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#07070f",
+  "theme_color": "#c8ff3e",
+  "icons": [
+    {
+      "src": "https://raw.githubusercontent.com/nassa7/APEX-Protocol/main/icon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
