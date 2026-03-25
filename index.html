@@ -6,7 +6,9 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#07070f">
-<title>APEX — Hassan Protocol v4</title>
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-title" content="APEX">
+<title>APEX — Hassan Protocol v5</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
 <!-- Google Identity Services — loaded without defer so SDK is ready on DOMContentLoaded -->
@@ -282,8 +284,51 @@ textarea{resize:vertical;min-height:80px;font-size:11px;line-height:1.5}
 .tip-purple{background:rgba(167,139,250,.05);border:1px solid rgba(167,139,250,.18);color:var(--purple)}
 .tip-green{background:rgba(62,255,170,.05);border:1px solid rgba(62,255,170,.18);color:var(--green)}
 
-/* UTILS */
-.div{height:1px;background:var(--border);margin:12px 0}
+/* ── REST TIMER ── */
+.rest-timer{position:fixed;bottom:0;left:50%;transform:translateX(-50%) translateY(100%);width:100%;max-width:480px;background:var(--bg2);border-top:1px solid var(--border);border-radius:20px 20px 0 0;padding:18px 24px 36px;z-index:150;transition:transform .35s cubic-bezier(.34,1.56,.64,1);box-shadow:0 -20px 60px rgba(0,0,0,.6)}
+.rest-timer.show{transform:translateX(-50%) translateY(0)}
+.rest-timer-label{font-family:var(--fm);font-size:9px;letter-spacing:3px;color:var(--muted);text-transform:uppercase;text-align:center;margin-bottom:6px}
+.rest-timer-ex{font-size:14px;font-weight:700;text-align:center;margin-bottom:14px;color:var(--text)}
+.rest-timer-ring-wrap{display:flex;justify-content:center;margin-bottom:12px}
+.rest-timer-num{font-size:52px;font-weight:800;letter-spacing:-3px;text-align:center;line-height:1;font-family:var(--fm)}
+.rest-timer-num.green{color:var(--green)}
+.rest-timer-num.yellow{color:var(--accent)}
+.rest-timer-num.red{color:var(--red)}
+.rest-timer-bar{height:4px;background:var(--bg3);border-radius:2px;overflow:hidden;margin-bottom:14px}
+.rest-timer-fill{height:100%;border-radius:2px;transition:width .5s linear,background .5s}
+.rest-timer-actions{display:flex;gap:8px}
+.rest-skip{flex:1;padding:11px;background:var(--bg3);border:1px solid var(--border);color:var(--muted);border-radius:9px;font-family:var(--ff);font-size:13px;font-weight:600;cursor:pointer}
+.rest-done{flex:1;padding:11px;background:var(--accent);color:#07070f;border:none;border-radius:9px;font-family:var(--ff);font-size:13px;font-weight:700;cursor:pointer}
+
+/* ── MUSCLE HEAT MAP ── */
+.heat-map-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:4px}
+.heat-cell{border-radius:9px;padding:10px 6px;text-align:center;border:1px solid var(--border);transition:all .4s cubic-bezier(.34,1.56,.64,1);position:relative;overflow:hidden}
+.heat-cell::before{content:'';position:absolute;inset:0;opacity:0;transition:opacity .4s}
+.heat-cell.h0{background:var(--bg3)}
+.heat-cell.h1{background:rgba(62,212,255,.08);border-color:rgba(62,212,255,.25)}
+.heat-cell.h2{background:rgba(62,255,170,.1);border-color:rgba(62,255,170,.3)}
+.heat-cell.h3{background:rgba(200,255,62,.12);border-color:rgba(200,255,62,.35)}
+.heat-cell.h4{background:rgba(255,107,62,.14);border-color:rgba(255,107,62,.4)}
+.heat-cell.h5{background:rgba(255,68,85,.16);border-color:rgba(255,68,85,.45)}
+.heat-icon{font-size:16px;margin-bottom:3px}
+.heat-label{font-family:var(--fm);font-size:8px;color:var(--muted);letter-spacing:.5px;margin-bottom:3px;text-transform:uppercase}
+.heat-vol{font-family:var(--fm);font-size:11px;font-weight:600}
+.heat-cell.h0 .heat-vol{color:var(--muted)}
+.heat-cell.h1 .heat-vol{color:var(--blue)}
+.heat-cell.h2 .heat-vol{color:var(--green)}
+.heat-cell.h3 .heat-vol{color:var(--accent)}
+.heat-cell.h4 .heat-vol{color:var(--orange)}
+.heat-cell.h5 .heat-vol{color:var(--red)}
+.heat-legend{display:flex;align-items:center;gap:6px;margin-top:8px;font-family:var(--fm);font-size:8px;color:var(--muted)}
+.heat-legend-dots{display:flex;gap:3px}
+.heat-legend-dot{width:8px;height:8px;border-radius:2px}
+
+/* ── AUTO-PROGRESSION ── */
+.prog-flag{display:flex;align-items:center;gap:5px;padding:5px 8px;background:rgba(62,255,170,.08);border:1px solid rgba(62,255,170,.3);border-radius:6px;font-family:var(--fm);font-size:9px;color:var(--green);margin-top:5px;animation:prog-pulse 2s infinite}
+@keyframes prog-pulse{0%,100%{border-color:rgba(62,255,170,.3)}50%{border-color:rgba(62,255,170,.7);box-shadow:0 0 10px rgba(62,255,170,.15)}}
+.prog-flag-icon{font-size:12px}
+.set-input.prog-ready{border-color:rgba(62,255,170,.5)!important;background:rgba(62,255,170,.04)!important}
+
 .fb{display:flex;justify-content:space-between;align-items:center}
 .fg{display:flex;gap:7px}
 .sm{font-family:var(--fm);font-size:10px}
@@ -379,6 +424,24 @@ textarea{resize:vertical;min-height:80px;font-size:11px;line-height:1.5}
     <div class="fb" style="margin-top:9px"><span class="sm mut">Sessions done</span><span class="sm acc" id="sessCount">0 / 5</span></div>
     <div class="rec-bar" id="recBar"></div>
     <div class="sm mut" id="recLabel">Recovery: OPTIMAL</div>
+  </div>
+
+  <!-- MUSCLE HEAT MAP -->
+  <div class="card t-orange">
+    <div class="lbl">Muscle Volume — This Week</div>
+    <div class="heat-map-grid" id="heatMapGrid"></div>
+    <div class="heat-legend">
+      <span>Volume:</span>
+      <div class="heat-legend-dots">
+        <div class="heat-legend-dot" style="background:var(--bg3)"></div>
+        <div class="heat-legend-dot" style="background:var(--blue)"></div>
+        <div class="heat-legend-dot" style="background:var(--green)"></div>
+        <div class="heat-legend-dot" style="background:var(--accent)"></div>
+        <div class="heat-legend-dot" style="background:var(--orange)"></div>
+        <div class="heat-legend-dot" style="background:var(--red)"></div>
+      </div>
+      <span>None → Light → Moderate → High → Very High → Max</span>
+    </div>
   </div>
 
   <div class="sg">
@@ -698,6 +761,20 @@ textarea{resize:vertical;min-height:80px;font-size:11px;line-height:1.5}
   </div>
 </div>
 
+<!-- REST TIMER -->
+<div class="rest-timer" id="restTimer">
+  <div class="rest-timer-label">REST PERIOD</div>
+  <div class="rest-timer-ex" id="rtExName">—</div>
+  <div class="rest-timer-ring-wrap">
+    <div class="rest-timer-num green" id="rtNum">120</div>
+  </div>
+  <div class="rest-timer-bar"><div class="rest-timer-fill" id="rtFill" style="width:100%;background:var(--green)"></div></div>
+  <div class="rest-timer-actions">
+    <button class="rest-skip" onclick="skipRestTimer()">Skip</button>
+    <button class="rest-done" onclick="skipRestTimer()">✓ Ready</button>
+  </div>
+</div>
+
 <script>
 // ═══════════════════════════════════════════
 // CONSTANTS
@@ -708,50 +785,72 @@ const TRAIN_DAYS = [0,1,2,3,4];
 const SLEEP_TARGET = 7.75;
 const SHEET_NAME = 'APEX_Protocol_Data';
 
+// rest: seconds. muscles: array of muscle group keys for heat map.
 const SESSIONS_DEF = [
   {day:'Day 1 — Monday',name:'PUSH',focus:'Chest · Shoulders · Triceps',exercises:[
-    {name:'Incline DB Press',note:'',sets:'4×8–10',rpe:'8',tempo:'3-1-X-0'},
-    {name:'Cable Chest Fly',note:'Low to high',sets:'3×12–15',rpe:'7',tempo:'2-1-2-0'},
-    {name:'Seated DB Shoulder Press',note:'',sets:'3×10–12',rpe:'8',tempo:'3-0-X-0'},
-    {name:'Cable Lateral Raise',note:'Unilateral',sets:'4×15–20',rpe:'7',tempo:'2-0-2-1'},
-    {name:'OHT Extension',note:'Cable rope',sets:'3×12–15',rpe:'8',tempo:'2-1-X-0'},
-    {name:'Tricep Pushdown',note:'Straight bar',sets:'3×15',rpe:'7',tempo:'2-0-X-0'}
+    {name:'Incline DB Press',      note:'',                 sets:'4×8–10',  rpe:'8',tempo:'3-1-X-0', rest:120, muscles:['chest','shoulders']},
+    {name:'Cable Chest Fly',       note:'Low to high',      sets:'3×12–15', rpe:'7',tempo:'2-1-2-0', rest:90,  muscles:['chest']},
+    {name:'Seated DB Shoulder Press',note:'',               sets:'3×10–12', rpe:'8',tempo:'3-0-X-0', rest:120, muscles:['shoulders']},
+    {name:'Cable Lateral Raise',   note:'Unilateral',       sets:'4×15–20', rpe:'7',tempo:'2-0-2-1', rest:60,  muscles:['shoulders']},
+    {name:'OHT Extension',         note:'Cable rope',       sets:'3×12–15', rpe:'8',tempo:'2-1-X-0', rest:90,  muscles:['triceps']},
+    {name:'Tricep Pushdown',       note:'Straight bar',     sets:'3×15',    rpe:'7',tempo:'2-0-X-0', rest:60,  muscles:['triceps']}
   ]},
   {day:'Day 2 — Tuesday',name:'PULL',focus:'Back · Biceps · Rear Delts',exercises:[
-    {name:'Seated Cable Row',note:'Wide grip',sets:'4×8–10',rpe:'8',tempo:'2-1-X-1'},
-    {name:'Lat Pulldown',note:'Neutral grip',sets:'4×10–12',rpe:'8',tempo:'2-1-X-0'},
-    {name:'Single Arm DB Row',note:'',sets:'3×10–12',rpe:'8',tempo:'2-0-X-1'},
-    {name:'Face Pull',note:'Rope, high cable',sets:'3×20',rpe:'6',tempo:'2-1-2-1'},
-    {name:'Incline DB Curl',note:'',sets:'3×10–12',rpe:'8',tempo:'3-0-X-1'},
-    {name:'Hammer Curl',note:'',sets:'3×12–15',rpe:'7',tempo:'2-0-X-0'}
+    {name:'Seated Cable Row',      note:'Wide grip',        sets:'4×8–10',  rpe:'8',tempo:'2-1-X-1', rest:120, muscles:['back','shoulders']},
+    {name:'Lat Pulldown',          note:'Neutral grip',     sets:'4×10–12', rpe:'8',tempo:'2-1-X-0', rest:90,  muscles:['back']},
+    {name:'Single Arm DB Row',     note:'',                 sets:'3×10–12', rpe:'8',tempo:'2-0-X-1', rest:90,  muscles:['back']},
+    {name:'Face Pull',             note:'Rope, high cable', sets:'3×20',    rpe:'6',tempo:'2-1-2-1', rest:60,  muscles:['shoulders']},
+    {name:'Incline DB Curl',       note:'',                 sets:'3×10–12', rpe:'8',tempo:'3-0-X-1', rest:90,  muscles:['biceps']},
+    {name:'Hammer Curl',           note:'',                 sets:'3×12–15', rpe:'7',tempo:'2-0-X-0', rest:60,  muscles:['biceps']}
   ]},
   {day:'Day 3 — Wednesday',name:'LEGS',focus:'Quad Dominant · Hamstrings · Calves',exercises:[
-    {name:'Leg Press',note:'Shoulder-width feet',sets:'4×10–12',rpe:'8',tempo:'3-1-X-0'},
-    {name:'Hack / Smith Squat',note:'',sets:'3×8–10',rpe:'8',tempo:'3-1-X-0'},
-    {name:'Leg Extension',note:'',sets:'4×15–20',rpe:'7',tempo:'2-1-2-1'},
-    {name:'Romanian DL',note:'DB, hinge focus',sets:'3×10–12',rpe:'7',tempo:'3-1-X-0'},
-    {name:'Leg Curl',note:'Seated or lying',sets:'3×12–15',rpe:'8',tempo:'2-1-2-1'},
-    {name:'Standing Calf Raise',note:'Bilateral, heel planted',sets:'4×15–20',rpe:'7',tempo:'2-1-3-0'}
+    {name:'Leg Press',             note:'Shoulder-width feet',sets:'4×10–12',rpe:'8',tempo:'3-1-X-0',rest:150, muscles:['quads']},
+    {name:'Hack / Smith Squat',    note:'',                   sets:'3×8–10', rpe:'8',tempo:'3-1-X-0',rest:150, muscles:['quads']},
+    {name:'Leg Extension',         note:'',                   sets:'4×15–20',rpe:'7',tempo:'2-1-2-1',rest:60,  muscles:['quads']},
+    {name:'Romanian DL',           note:'DB, hinge focus',    sets:'3×10–12',rpe:'7',tempo:'3-1-X-0',rest:120, muscles:['hamstrings']},
+    {name:'Leg Curl',              note:'Seated or lying',    sets:'3×12–15',rpe:'8',tempo:'2-1-2-1',rest:90,  muscles:['hamstrings']},
+    {name:'Standing Calf Raise',   note:'Bilateral, heel planted',sets:'4×15–20',rpe:'7',tempo:'2-1-3-0',rest:60, muscles:[]}
   ]},
   {day:'Day 4 — Thursday',name:'UPPER',focus:'Strength Focus',exercises:[
-    {name:'Flat DB Press',note:'',sets:'4×6–8',rpe:'9',tempo:'3-1-X-0'},
-    {name:'Weighted Pull-Up',note:'Or assisted',sets:'4×6–8',rpe:'9',tempo:'2-0-X-1'},
-    {name:'Cable Row',note:'Close grip',sets:'3×8–10',rpe:'8',tempo:'2-1-X-1'},
-    {name:'Lateral Raise',note:'Cable, unilateral',sets:'3×15',rpe:'7',tempo:'2-0-2-1'},
-    {name:'EZ Bar Curl',note:'',sets:'3×8–10',rpe:'8',tempo:'2-0-X-1'},
-    {name:'Skull Crusher',note:'EZ bar',sets:'3×8–10',rpe:'8',tempo:'3-1-X-0'}
+    {name:'Flat DB Press',         note:'',                 sets:'4×6–8',   rpe:'9',tempo:'3-1-X-0', rest:150, muscles:['chest','shoulders']},
+    {name:'Weighted Pull-Up',      note:'Or assisted',      sets:'4×6–8',   rpe:'9',tempo:'2-0-X-1', rest:150, muscles:['back','biceps']},
+    {name:'Cable Row',             note:'Close grip',       sets:'3×8–10',  rpe:'8',tempo:'2-1-X-1', rest:120, muscles:['back']},
+    {name:'Lateral Raise',         note:'Cable, unilateral',sets:'3×15',    rpe:'7',tempo:'2-0-2-1', rest:60,  muscles:['shoulders']},
+    {name:'EZ Bar Curl',           note:'',                 sets:'3×8–10',  rpe:'8',tempo:'2-0-X-1', rest:90,  muscles:['biceps']},
+    {name:'Skull Crusher',         note:'EZ bar',           sets:'3×8–10',  rpe:'8',tempo:'3-1-X-0', rest:90,  muscles:['triceps']}
   ]},
   {day:'Day 5 — Friday',name:'ARMS + CORE',focus:'Biceps · Triceps · Abs',exercises:[
-    {name:'Cable Curl',note:'Bilateral',sets:'4×12–15',rpe:'8',tempo:'2-1-2-1'},
-    {name:'Concentration Curl',note:'',sets:'3×12–15',rpe:'8',tempo:'2-1-X-1'},
-    {name:'Cable Pushdown',note:'Rope',sets:'4×15',rpe:'8',tempo:'2-1-X-0'},
-    {name:'DB Overhead Extension',note:'',sets:'3×12',rpe:'7',tempo:'3-1-X-0'},
-    {name:'Cable Crunch',note:'',sets:'4×15–20',rpe:'8',tempo:'2-1-2-1'},
-    {name:'Hanging Knee Raise',note:'',sets:'3×15–20',rpe:'7',tempo:'controlled'},
-    {name:'Ab Wheel Rollout',note:'',sets:'3×10',rpe:'8',tempo:'3-0-X-0'},
-    {name:'Side Plank',note:'Each side',sets:'3×45s',rpe:'7',tempo:'—'}
+    {name:'Cable Curl',            note:'Bilateral',        sets:'4×12–15', rpe:'8',tempo:'2-1-2-1', rest:60,  muscles:['biceps']},
+    {name:'Concentration Curl',    note:'',                 sets:'3×12–15', rpe:'8',tempo:'2-1-X-1', rest:60,  muscles:['biceps']},
+    {name:'Cable Pushdown',        note:'Rope',             sets:'4×15',    rpe:'8',tempo:'2-1-X-0', rest:60,  muscles:['triceps']},
+    {name:'DB Overhead Extension', note:'',                 sets:'3×12',    rpe:'7',tempo:'3-1-X-0', rest:90,  muscles:['triceps']},
+    {name:'Cable Crunch',          note:'',                 sets:'4×15–20', rpe:'8',tempo:'2-1-2-1', rest:60,  muscles:['core']},
+    {name:'Hanging Knee Raise',    note:'',                 sets:'3×15–20', rpe:'7',tempo:'controlled',rest:60, muscles:['core']},
+    {name:'Ab Wheel Rollout',      note:'',                 sets:'3×10',    rpe:'8',tempo:'3-0-X-0', rest:60,  muscles:['core']},
+    {name:'Side Plank',            note:'Each side',        sets:'3×45s',   rpe:'7',tempo:'—',        rest:45,  muscles:['core']}
   ]}
 ];
+
+// Muscle group display config for heat map
+const MUSCLE_GROUPS = [
+  {key:'chest',     label:'Chest',     icon:'🫁'},
+  {key:'back',      label:'Back',      icon:'🔙'},
+  {key:'shoulders', label:'Shoulders', icon:'💪'},
+  {key:'biceps',    label:'Biceps',    icon:'💪'},
+  {key:'triceps',   label:'Triceps',   icon:'💪'},
+  {key:'quads',     label:'Quads',     icon:'🦵'},
+  {key:'hamstrings',label:'Hamstrings',icon:'🦵'},
+  {key:'core',      label:'Core',      icon:'⬡'},
+];
+
+// Parse rep range from sets string e.g. "4×8–10" → {min:8, max:10}
+function parseRepRange(setsStr) {
+  const m = setsStr.match(/[×x](\d+)[–\-](\d+)/);
+  if(m) return { min: parseInt(m[1]), max: parseInt(m[2]) };
+  const s = setsStr.match(/[×x](\d+)$/);
+  if(s) { const n=parseInt(s[1]); return { min:n, max:n }; }
+  return { min:0, max:999 };
+}
 
 // ═══════════════════════════════════════════
 // STATE
@@ -1296,7 +1395,29 @@ function mkSets(str){const n=parseInt(str)||3;return Array(n).fill(null).map(()=
 function togSess(si){const body=document.getElementById('sbody-'+si),chev=document.getElementById('chev-'+si),open=body.classList.contains('open');document.querySelectorAll('.sc-body').forEach(b=>b.classList.remove('open'));document.querySelectorAll('.chev').forEach(c=>{c.classList.remove('open');c.textContent='▾';});if(!open){body.classList.add('open');chev.classList.add('open');chev.textContent='▴';}}
 function markSess(si,status){S.sessions[si]=status;save();document.getElementById('sdot-'+si).className=status==='done'?'sdot done':'sdot missed';updateWeekGrid();updateRecovery();updateSessCount();}
 function updSet(si,ei,sti,field,val){S.setLogs[si+'_'+ei][sti][field]=val;save();}
-function togSetDone(si,ei,sti){const k=si+'_'+ei,st=S.setLogs[k][sti];st.done=!st.done;save();const row=document.getElementById(`sr-${si}-${ei}-${sti}`);row.querySelectorAll('.set-input').forEach(i=>i.className='set-input'+(st.done?' done-in':''));const btn=row.querySelector('.set-chk');btn.className='set-chk'+(st.done?' logged':'');btn.textContent=st.done?'✓':'○';const sets=S.setLogs[k],dc=sets.filter(s=>s.done).length;document.getElementById(`sc-${si}-${ei}`).textContent=`${dc}/${sets.length} sets logged`;}
+function togSetDone(si,ei,sti){
+  const k=si+'_'+ei,st=S.setLogs[k][sti];
+  st.done=!st.done; save();
+  const row=document.getElementById(`sr-${si}-${ei}-${sti}`);
+  row.querySelectorAll('.set-input').forEach(i=>i.className='set-input'+(st.done?' done-in':''));
+  const btn=row.querySelector('.set-chk');
+  btn.className='set-chk'+(st.done?' logged':'');
+  btn.textContent=st.done?'✓':'○';
+  const sets=S.setLogs[k],dc=sets.filter(s=>s.done).length;
+  document.getElementById(`sc-${si}-${ei}`).textContent=`${dc}/${sets.length} sets logged`;
+
+  if(st.done) {
+    // Start rest timer
+    const ex = SESSIONS_DEF[si]?.exercises[ei];
+    if(ex) startRestTimer(ex.name, ex.rest || 90);
+    // Check auto-progression
+    renderProgressionFlag(si, ei);
+    // Update heat map
+    updateHeatMap();
+    // Haptic confirmation
+    if(navigator.vibrate) navigator.vibrate(40);
+  }
+}
 function addSet(si,ei){const k=si+'_'+ei,sets=S.setLogs[k],last=sets[sets.length-1];sets.push({kg:last?.kg||'',reps:last?.reps||'',done:false});save();const lg=document.getElementById(`lg-${si}-${ei}`);lg.innerHTML=sets.map((st,sti)=>`<div class="set-row" id="sr-${si}-${ei}-${sti}"><span class="set-num">S${sti+1}</span><input class="set-input${st.done?' done-in':''}" type="number" placeholder="kg" step="0.5" min="0" value="${st.kg}" oninput="updSet(${si},${ei},${sti},'kg',this.value)"><span class="set-sep">×</span><input class="set-input${st.done?' done-in':''}" type="number" placeholder="reps" step="1" min="0" value="${st.reps}" oninput="updSet(${si},${ei},${sti},'reps',this.value)"><button class="set-chk${st.done?' logged':''}" onclick="togSetDone(${si},${ei},${sti})">${st.done?'✓':'○'}</button></div>`).join('');document.getElementById(`sc-${si}-${ei}`).textContent=`${sets.filter(s=>s.done).length}/${sets.length} sets logged`;}
 
 // ═══════════════════════════════════════════
@@ -1372,9 +1493,168 @@ function closeModal(id){document.getElementById(id).classList.remove('show');}
 document.querySelectorAll('.modal-overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('show');}));
 
 // ═══════════════════════════════════════════
-// RENDER ALL
+// REST TIMER
 // ═══════════════════════════════════════════
-function renderAll(){buildSessions();updateWeekGrid();updateRecovery();updateSessCount();updateNutritionUI();updateWeightUI();updateWeekBadge();updateSleepUI();restoreToggles();updateApiAlert();updateAuthUI();const k=getApiKey();if(k){document.getElementById('apiKeyIn').value=k;setApiStat('✓ Key loaded','var(--green)');}const cid=getClientId();if(cid)document.getElementById('clientIdInput').value=cid;}
+let rtInterval = null;
+let rtRemaining = 0;
+let rtTotal = 0;
+
+function startRestTimer(exName, restSecs) {
+  clearInterval(rtInterval);
+  rtRemaining = restSecs;
+  rtTotal = restSecs;
+  document.getElementById('rtExName').textContent = exName;
+  updateRtDisplay();
+  document.getElementById('restTimer').classList.add('show');
+  // Haptic on start
+  if(navigator.vibrate) navigator.vibrate(50);
+
+  rtInterval = setInterval(() => {
+    rtRemaining--;
+    updateRtDisplay();
+    if(rtRemaining <= 0) {
+      clearInterval(rtInterval);
+      // Haptic burst — rest complete
+      if(navigator.vibrate) navigator.vibrate([100,50,100,50,200]);
+      setTimeout(() => document.getElementById('restTimer').classList.remove('show'), 800);
+    }
+  }, 1000);
+}
+
+function updateRtDisplay() {
+  const el = document.getElementById('rtNum');
+  const fill = document.getElementById('rtFill');
+  const pct = (rtRemaining / rtTotal) * 100;
+
+  el.textContent = rtRemaining;
+  fill.style.width = pct + '%';
+
+  if(pct > 60) {
+    el.className = 'rest-timer-num green';
+    fill.style.background = 'var(--green)';
+  } else if(pct > 30) {
+    el.className = 'rest-timer-num yellow';
+    fill.style.background = 'var(--accent)';
+  } else {
+    el.className = 'rest-timer-num red';
+    fill.style.background = 'var(--red)';
+  }
+}
+
+function skipRestTimer() {
+  clearInterval(rtInterval);
+  document.getElementById('restTimer').classList.remove('show');
+  if(navigator.vibrate) navigator.vibrate(30);
+}
+
+// ═══════════════════════════════════════════
+// MUSCLE HEAT MAP
+// ═══════════════════════════════════════════
+function calcMuscleVolumes() {
+  const vols = {};
+  MUSCLE_GROUPS.forEach(mg => vols[mg.key] = 0);
+
+  SESSIONS_DEF.forEach((sess, si) => {
+    if(S.sessions[si] !== 'done') return;
+    sess.exercises.forEach((ex, ei) => {
+      if(!ex.muscles || !ex.muscles.length) return;
+      const key = si + '_' + ei;
+      const sets = S.setLogs[key] || [];
+      const vol = sets.filter(s => s.done).reduce((a, s) => {
+        return a + ((parseFloat(s.kg) || 0) * (parseInt(s.reps) || 0));
+      }, 0);
+      ex.muscles.forEach(mg => { vols[mg] = (vols[mg] || 0) + vol; });
+    });
+  });
+  return vols;
+}
+
+function volumeToHeatLevel(vol) {
+  if(vol === 0) return 0;
+  if(vol < 500)  return 1;
+  if(vol < 1500) return 2;
+  if(vol < 3000) return 3;
+  if(vol < 5000) return 4;
+  return 5;
+}
+
+function updateHeatMap() {
+  const grid = document.getElementById('heatMapGrid');
+  if(!grid) return;
+  const vols = calcMuscleVolumes();
+  grid.innerHTML = MUSCLE_GROUPS.map(mg => {
+    const vol = vols[mg.key] || 0;
+    const level = volumeToHeatLevel(vol);
+    const volStr = vol > 0 ? (vol >= 1000 ? (vol/1000).toFixed(1)+'k' : vol+'') : '—';
+    return `<div class="heat-cell h${level}">
+      <div class="heat-icon">${mg.icon}</div>
+      <div class="heat-label">${mg.label}</div>
+      <div class="heat-vol">${volStr}${vol>0?'kg':''}</div>
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════
+// AUTO-PROGRESSION
+// ═══════════════════════════════════════════
+function checkAutoProgression(si, ei) {
+  const ex = SESSIONS_DEF[si]?.exercises[ei];
+  if(!ex) return false;
+  const range = parseRepRange(ex.sets);
+  if(range.max === 999) return false; // no upper bound
+
+  const key = si + '_' + ei;
+  const currentSets = S.setLogs[key] || [];
+  const loggedCurrent = currentSets.filter(s => s.done);
+  if(!loggedCurrent.length) return false;
+
+  // Check if ALL logged sets in current session hit top of range
+  const currentHitTop = loggedCurrent.every(s => parseInt(s.reps) >= range.max);
+  if(!currentHitTop) return false;
+
+  // Check previous week's history for same exercise
+  const lastHistory = (S.history || []).slice(-1)[0];
+  if(!lastHistory || !lastHistory.setLogs) return false;
+
+  const prevSets = lastHistory.setLogs[key] || [];
+  const loggedPrev = prevSets.filter(s => s.done);
+  if(!loggedPrev.length) return false;
+
+  const prevHitTop = loggedPrev.every(s => parseInt(s.reps) >= range.max);
+  return prevHitTop; // both sessions hit top → flag progression
+}
+
+function renderProgressionFlag(si, ei) {
+  const flagId = `prog-flag-${si}-${ei}`;
+  const existing = document.getElementById(flagId);
+  if(existing) existing.remove();
+
+  if(checkAutoProgression(si, ei)) {
+    const ex = SESSIONS_DEF[si].exercises[ei];
+    const range = parseRepRange(ex.sets);
+    const key = si + '_' + ei;
+    const sets = S.setLogs[key] || [];
+    const topKg = Math.max(...sets.filter(s=>s.done).map(s=>parseFloat(s.kg)||0), 0);
+    const nextKg = topKg > 0 ? (topKg + 2.5).toFixed(1) : null;
+
+    const flag = document.createElement('div');
+    flag.className = 'prog-flag';
+    flag.id = flagId;
+    flag.innerHTML = `<span class="prog-flag-icon">📈</span> Hit ${range.max} reps x2 weeks — increase weight${nextKg ? ` to <strong>${nextKg}kg</strong>` : ' by 2.5kg'} next session`;
+
+    // Insert after the set-count div for this exercise
+    const countEl = document.getElementById(`sc-${si}-${ei}`);
+    if(countEl) countEl.after(flag);
+
+    // Also highlight weight inputs green
+    document.querySelectorAll(`#lg-${si}-${ei} .set-input`).forEach((inp, i) => {
+      if(i % 2 === 0) inp.classList.add('prog-ready'); // every other input is kg
+    });
+  }
+}
+
+
+function renderAll(){buildSessions();updateWeekGrid();updateRecovery();updateSessCount();updateNutritionUI();updateWeightUI();updateWeekBadge();updateSleepUI();restoreToggles();updateApiAlert();updateAuthUI();updateHeatMap();const k=getApiKey();if(k){document.getElementById('apiKeyIn').value=k;setApiStat('✓ Key loaded','var(--green)');}const cid=getClientId();if(cid)document.getElementById('clientIdInput').value=cid;}
 
 // ═══════════════════════════════════════════
 // BOOT — app always loads immediately
