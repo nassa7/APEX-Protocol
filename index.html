@@ -4,1010 +4,339 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#07070f">
-<title>APEX — Hassan Protocol v4</title>
+<title>APEX — Performance System</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script src="https://apis.google.com/js/api.js" async defer></script>
 <style>
 :root {
-  --bg:#07070f;--bg2:#0d0d18;--bg3:#141420;--card:#101018;--border:#22223a;--border2:#2e2e48;
+  --bg:#07070f;--bg2:#0d0d18;--bg3:#141420;
+  --card:rgba(16, 16, 24, 0.6); /* Glassmorphism Base */
+  --border:rgba(34, 34, 58, 0.5);
   --accent:#c8ff3e;--blue:#3ed4ff;--orange:#ff6b3e;--purple:#a78bfa;
   --text:#eeeef8;--muted:#5a5a78;--green:#3effaa;--red:#ff4455;
-  --protein:#ff6b3e;--carbs:#3ed4ff;--fat:#c8ff3e;
   --r:14px;--ff:'Syne',sans-serif;--fm:'JetBrains Mono',monospace;
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html,body{background:var(--bg);color:var(--text);font-family:var(--ff);min-height:100vh;overscroll-behavior:none}
 body{display:flex;flex-direction:column;max-width:480px;margin:0 auto;padding-bottom:96px}
 
-/* AUTH SCREEN */
-.auth-screen{position:fixed;inset:0;background:var(--bg);z-index:200;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;text-align:center}
-.auth-screen.hidden{display:none}
-.auth-logo{font-family:var(--fm);font-size:11px;font-weight:600;letter-spacing:4px;color:var(--accent);margin-bottom:20px}
-.auth-title{font-size:36px;font-weight:800;letter-spacing:-1.5px;line-height:1;margin-bottom:8px}
-.auth-title em{font-style:normal;color:var(--accent)}
-.auth-sub{font-family:var(--fm);font-size:11px;color:var(--muted);line-height:1.6;margin-bottom:40px;max-width:300px}
-.auth-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:24px;width:100%;max-width:340px;margin-bottom:20px}
-.auth-card-title{font-size:14px;font-weight:700;margin-bottom:6px}
-.auth-card-sub{font-family:var(--fm);font-size:10px;color:var(--muted);line-height:1.5;margin-bottom:18px}
-.btn-google{width:100%;padding:14px;background:#fff;color:#1f1f1f;border:none;border-radius:10px;font-family:var(--ff);font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;transition:all .2s}
-.btn-google:hover{background:#f0f0f0}
-.btn-google:active{transform:scale(.97)}
-.google-logo{width:20px;height:20px;flex-shrink:0}
-.auth-note{font-family:var(--fm);font-size:9px;color:var(--muted);line-height:1.5;max-width:280px}
+/* GLASSMORPHISM */
+.glass{background:var(--card);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid var(--border);border-radius:var(--r)}
 
-/* SYNC STATUS */
-.sync-bar{display:flex;align-items:center;gap:6px;padding:6px 20px;background:var(--bg2);border-bottom:1px solid var(--border);font-family:var(--fm);font-size:9px;letter-spacing:1px;color:var(--muted);position:sticky;top:0;z-index:25;transition:all .3s}
-.sync-dot{width:6px;height:6px;border-radius:50%;background:var(--muted);flex-shrink:0;transition:all .3s}
-.sync-bar.syncing .sync-dot{background:var(--accent);animation:blink .8s infinite}
-.sync-bar.synced .sync-dot{background:var(--green)}
-.sync-bar.error .sync-dot{background:var(--red)}
-.sync-bar.offline .sync-dot{background:var(--orange)}
-.sync-user{margin-left:auto;color:var(--muted);font-size:8px;cursor:pointer}
-.sync-user:hover{color:var(--text)}
-@keyframes blink{0%,100%{opacity:.4}50%{opacity:1}}
+/* REST TIMER OVERLAY */
+#restTimerOverlay{position:fixed;bottom:20px;right:20px;width:60px;height:60px;border-radius:50%;background:var(--accent);color:#000;display:none;align-items:center;justify-content:center;font-family:var(--fm);font-weight:800;z-index:100;box-shadow:0 0 20px var(--accent);cursor:pointer}
 
-/* HEADER */
-.hdr{padding:50px 20px 12px;position:sticky;top:32px;z-index:20;background:rgba(7,7,15,0.94);backdrop-filter:blur(28px);-webkit-backdrop-filter:blur(28px);border-bottom:1px solid rgba(255,255,255,0.04)}
-.hdr-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:3px}
-.logo{font-family:var(--fm);font-size:10px;font-weight:600;letter-spacing:4px;color:var(--accent)}
-.wk-badge{font-family:var(--fm);font-size:10px;color:var(--muted);background:var(--bg3);border:1px solid var(--border);padding:3px 9px;border-radius:4px}
-.hdr h1{font-size:22px;font-weight:800;letter-spacing:-.5px;line-height:1.1}
-.hdr h1 em{font-style:normal;color:var(--accent)}
+/* AUTH & ONBOARDING */
+.overlay-screen{position:fixed;inset:0;background:var(--bg);z-index:200;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;text-align:center}
+.hidden{display:none}
 
-/* TABS */
-.tabs{display:grid;grid-template-columns:repeat(5,1fr);gap:3px;padding:10px 20px 12px;position:sticky;top:108px;z-index:19;background:rgba(7,7,15,0.9);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
-.tab{padding:8px 2px;border:1px solid var(--border);background:var(--card);color:var(--muted);border-radius:7px;font-family:var(--fm);font-size:9px;font-weight:500;letter-spacing:.5px;cursor:pointer;transition:all .2s;text-transform:uppercase;text-align:center}
-.tab.on{background:var(--accent);color:#07070f;border-color:var(--accent);font-weight:700}
-
-/* PANELS */
-.panel{display:none;padding:0 20px;animation:fadeIn .2s ease}
+/* TYPOGRAPHY & CARDS */
+.hdr{padding:40px 20px 12px;position:sticky;top:0;z-index:20;background:rgba(7,7,15,0.8);backdrop-filter:blur(20px)}
+.tabs{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;padding:10px 20px;position:sticky;top:85px;z-index:19;background:rgba(7,7,15,0.8);backdrop-filter:blur(20px)}
+.tab{padding:10px 2px;border:1px solid var(--border);background:var(--card);color:var(--muted);border-radius:8px;font-family:var(--fm);font-size:9px;text-transform:uppercase;cursor:pointer}
+.tab.on{background:var(--accent);color:#000;border-color:var(--accent);font-weight:700}
+.panel{display:none;padding:20px}
 .panel.on{display:block}
-@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+.card{padding:16px;margin-bottom:12px}
 
-/* CARD */
-.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:16px;margin-bottom:11px;position:relative;overflow:hidden}
-.card.t-green::before,.card.t-blue::before,.card.t-orange::before,.card.t-purple::before,.card.t-red::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
-.card.t-green::before{background:var(--accent)}
-.card.t-blue::before{background:var(--blue)}
-.card.t-orange::before{background:var(--orange)}
-.card.t-purple::before{background:var(--purple)}
-.card.t-red::before{background:var(--red)}
-.lbl{font-family:var(--fm);font-size:9px;font-weight:600;letter-spacing:3px;color:var(--muted);text-transform:uppercase;margin-bottom:11px}
-
-/* ALERTS */
-.alert{display:none;border-radius:var(--r);padding:12px 15px;margin-bottom:11px;font-family:var(--fm);font-size:11px;line-height:1.6}
-.alert.show{display:block}
-.alert strong{display:block;font-size:9px;letter-spacing:2px;margin-bottom:3px}
-.al-red{background:rgba(255,68,85,.09);border:1px solid rgba(255,68,85,.3);color:var(--red)}
-.al-green{background:rgba(62,255,170,.07);border:1px solid rgba(62,255,170,.25);color:var(--green)}
-.al-yellow{background:rgba(200,255,62,.07);border:1px solid rgba(200,255,62,.25);color:var(--accent)}
-.al-blue{background:rgba(62,212,255,.07);border:1px solid rgba(62,212,255,.25);color:var(--blue)}
-.al-purple{background:rgba(167,139,250,.07);border:1px solid rgba(167,139,250,.25);color:var(--purple)}
-.al-orange{background:rgba(255,107,62,.07);border:1px solid rgba(255,107,62,.25);color:var(--orange)}
-
-/* STATS */
-.sg{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:11px}
-.sc{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:14px 13px}
-.sc-lbl{font-family:var(--fm);font-size:8px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:5px}
-.sc-val{font-size:24px;font-weight:800;letter-spacing:-1px;line-height:1}
-.sc-val span{font-size:11px;font-weight:400;color:var(--muted)}
-.sc-sub{font-family:var(--fm);font-size:10px;color:var(--muted);margin-top:3px}
-
-/* RING */
-.ring-wrap{display:flex;align-items:center;gap:18px;margin-bottom:4px}
-.ring-num{font-size:28px;font-weight:800;letter-spacing:-1.5px;line-height:1}
-.ring-lbl{font-family:var(--fm);font-size:8px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:5px}
-.ring-sub{font-family:var(--fm);font-size:10px;color:var(--muted);margin-top:3px}
-
-/* WEEK GRID */
-.wg{display:flex;gap:4px;margin:9px 0}
-.dp{flex:1;height:42px;border-radius:7px;background:var(--bg3);border:1px solid var(--border);display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:var(--fm);font-size:7px;color:var(--muted);letter-spacing:.3px;transition:all .3s}
-.dp .dpi{font-size:12px;margin-bottom:1px}
-.dp.training{border-color:rgba(200,255,62,.2)}
-.dp.done-d{background:rgba(62,255,170,.08);border-color:var(--green);color:var(--green)}
-.dp.miss-d{background:rgba(255,68,85,.06);border-color:rgba(255,68,85,.3);color:var(--red)}
-.dp.today{border-color:var(--blue);color:var(--blue)}
-.dp.cycle-d{background:rgba(62,212,255,.07);border-color:rgba(62,212,255,.3);color:var(--blue)}
-
-/* RECOVERY */
-.rec-bar{display:flex;gap:4px;margin:9px 0 3px}
-.rd{flex:1;height:6px;border-radius:3px;background:var(--bg3);border:1px solid var(--border);transition:all .4s}
-.rd.good{background:var(--green);border-color:var(--green)}
-.rd.warn{background:var(--accent);border-color:var(--accent)}
-.rd.bad{background:var(--red);border-color:var(--red)}
-
-/* PROGRESS BARS */
-.pb-wrap{margin-bottom:10px}
-.pb-lbl{display:flex;justify-content:space-between;font-family:var(--fm);font-size:10px;margin-bottom:3px}
-.pb-lbl span:last-child{color:var(--muted)}
-.pb-track{height:5px;background:var(--bg3);border-radius:3px;overflow:hidden}
-.pb-fill{height:100%;border-radius:3px;transition:width .6s cubic-bezier(.34,1.56,.64,1)}
-
-/* MACRO CARDS */
-.mc-row{display:flex;gap:7px;margin-bottom:11px}
-.mc{flex:1;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:13px 7px;text-align:center}
-.mc-ico{font-size:16px;margin-bottom:3px}
-.mc-n{font-family:var(--fm);font-size:7px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:4px}
-.mc-v{font-size:19px;font-weight:800;letter-spacing:-1px}
-.mc-t{font-family:var(--fm);font-size:8px;color:var(--muted)}
+/* RING LOGIC */
+#calRing{transition:stroke-dashoffset 0.8s ease, stroke 0.5s ease}
 
 /* INPUTS */
-.ig{display:flex;flex-direction:column;gap:4px}
-.il{font-family:var(--fm);font-size:8px;letter-spacing:2px;color:var(--muted);text-transform:uppercase}
-input[type=number],input[type=text],input[type=password],input[type=time],textarea{background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--fm);font-size:14px;padding:9px 11px;width:100%;outline:none;transition:border-color .2s;-webkit-appearance:none;appearance:none}
-input:focus,textarea:focus{border-color:var(--accent)}
-textarea{resize:vertical;min-height:80px;font-size:11px;line-height:1.5}
-.input-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:11px}
+input, select{background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--fm);padding:10px;width:100%;outline:none}
+.btn{width:100%;padding:14px;border-radius:10px;border:none;font-weight:800;cursor:pointer;transition:transform 0.1s}
+.btn:active{transform:scale(0.96)}
+.btn-p{background:var(--accent);color:#000}
 
-/* TOGGLES */
-.tog-item{display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid var(--border)}
-.tog-item:last-child{border-bottom:none}
-.tog-info{flex:1}
-.tog-name{font-size:13px;font-weight:600;margin-bottom:1px}
-.tog-sub{font-family:var(--fm);font-size:10px;color:var(--muted);line-height:1.4}
-.tog{width:46px;height:25px;background:var(--bg3);border:1px solid var(--border);border-radius:13px;position:relative;cursor:pointer;transition:all .3s;flex-shrink:0;margin-left:11px}
-.tog.on{background:var(--accent);border-color:var(--accent)}
-.tog::after{content:'';position:absolute;width:17px;height:17px;background:var(--muted);border-radius:50%;top:3px;left:3px;transition:all .3s cubic-bezier(.34,1.56,.64,1)}
-.tog.on::after{left:22px;background:#07070f}
+/* TRAINING LOGS */
+.set-row{display:flex;gap:8px;margin-bottom:6px;align-items:center}
+.set-input{flex:1;font-size:14px;text-align:center}
+.set-chk{width:40px;height:40px;border-radius:8px;background:var(--bg3);border:1px solid var(--border);color:var(--muted)}
+.set-chk.logged{background:var(--green);color:#000;border-color:var(--green)}
+.progression-highlight{border-color:var(--accent) !important;box-shadow:0 0 10px rgba(200,255,62,0.3)}
 
-/* BUTTONS */
-.btn{padding:11px 16px;border-radius:10px;border:none;font-family:var(--ff);font-size:13px;font-weight:700;cursor:pointer;transition:all .18s;letter-spacing:.3px}
-.btn:active{transform:scale(.96)}
-.btn-primary{background:var(--accent);color:#07070f}
-.btn-secondary{background:var(--bg3);color:var(--muted);border:1px solid var(--border)}
-.btn-full{width:100%;padding:13px;font-size:14px;background:var(--accent);color:#07070f}
-.btn-outline{width:100%;padding:12px;background:transparent;border:1px solid var(--border);color:var(--muted);font-size:12px}
-.btn-danger{width:100%;padding:12px;background:rgba(255,68,85,.09);border:1px solid rgba(255,68,85,.3);color:var(--red);font-size:12px}
-.btn-ai{width:100%;padding:14px;background:linear-gradient(135deg,#182808,#081828);border:1px solid rgba(200,255,62,.3);color:var(--accent);font-size:13px;font-weight:800;letter-spacing:1px;font-family:var(--fm)}
-
-/* SESSIONS */
-.sc-wrap{background:var(--card);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:11px}
-.sc-hdr{display:flex;justify-content:space-between;align-items:center;padding:13px 16px;cursor:pointer;user-select:none;-webkit-user-select:none}
-.sc-hdr:active{background:var(--bg3)}
-.sc-day{font-family:var(--fm);font-size:8px;font-weight:600;letter-spacing:3px;color:var(--muted);text-transform:uppercase;margin-bottom:2px}
-.sc-name{font-size:17px;font-weight:800;letter-spacing:-.3px}
-.sc-focus{font-family:var(--fm);font-size:10px;color:var(--muted);margin-top:2px}
-.sc-meta{display:flex;flex-direction:column;align-items:flex-end;gap:5px}
-.sdot{width:9px;height:9px;border-radius:50%;background:var(--border);transition:background .3s}
-.sdot.done{background:var(--green);box-shadow:0 0 8px var(--green)}
-.sdot.missed{background:var(--red)}
-.chev{font-family:var(--fm);font-size:10px;color:var(--muted);transition:transform .25s}
-.chev.open{transform:rotate(180deg)}
-.sc-body{display:none;border-top:1px solid var(--border);padding:14px 16px}
-.sc-body.open{display:block}
-
-/* EXERCISES */
-.ex-block{margin-bottom:16px;border-bottom:1px solid rgba(255,255,255,.03);padding-bottom:16px}
-.ex-block:last-of-type{border-bottom:none;margin-bottom:0;padding-bottom:0}
-.ex-hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:7px}
-.ex-title{font-size:13px;font-weight:700}
-.ex-subtitle{font-family:var(--fm);font-size:9px;color:var(--muted);margin-top:1px}
-.ex-meta{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end}
-.chip{font-family:var(--fm);font-size:8px;padding:2px 6px;border-radius:4px;border:1px solid}
-.chip-rpe{color:var(--accent);border-color:rgba(200,255,62,.2);background:rgba(200,255,62,.06)}
-.chip-tempo{color:var(--blue);border-color:rgba(62,212,255,.18);background:rgba(62,212,255,.05)}
-.chip-sets{color:var(--muted);border-color:var(--border);background:var(--bg3)}
-
-/* SET LOGGER */
-.set-logger{display:flex;flex-direction:column;gap:5px}
-.set-row{display:flex;align-items:center;gap:6px}
-.set-num{font-family:var(--fm);font-size:9px;color:var(--muted);min-width:24px}
-.set-input{flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:var(--fm);font-size:13px;padding:7px 9px;outline:none;transition:border-color .2s;-webkit-appearance:none;appearance:none}
-.set-input:focus{border-color:var(--accent)}
-.set-input.done-in{border-color:rgba(62,255,170,.3);background:rgba(62,255,170,.04)}
-.set-sep{font-family:var(--fm);font-size:9px;color:var(--muted)}
-.set-chk{width:26px;height:26px;border-radius:6px;background:var(--bg3);border:1px solid var(--border);color:var(--muted);font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;flex-shrink:0}
-.set-chk.logged{background:rgba(62,255,170,.1);border-color:var(--green);color:var(--green)}
-.set-add{font-family:var(--fm);font-size:9px;color:var(--accent);background:none;border:1px dashed rgba(200,255,62,.2);border-radius:6px;padding:5px;cursor:pointer;width:100%;text-align:center;transition:all .2s;margin-top:3px}
-.set-add:active{background:rgba(200,255,62,.06)}
-.sets-count{font-family:var(--fm);font-size:9px;color:var(--muted);text-align:right;margin-top:3px}
-.sess-actions{display:flex;gap:7px;margin-top:14px;padding-top:14px;border-top:1px solid var(--border)}
-
-/* WEIGHT LOG */
-.wl-item{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.03);font-family:var(--fm)}
-.wl-item:last-child{border-bottom:none}
-.wl-date{font-size:10px;color:var(--muted)}
-.wl-val{font-size:14px;font-weight:500}
-.wl-neg{color:var(--green)}.wl-pos{color:var(--red)}
-
-/* SLEEP */
-.sleep-clock{display:flex;justify-content:center;margin:14px 0 18px}
-.sleep-arc-wrap{position:relative;width:190px;height:190px}
-.sleep-arc-wrap svg{width:190px;height:190px}
-.sleep-center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center}
-.sleep-hrs{font-size:30px;font-weight:800;letter-spacing:-2px;color:var(--purple);line-height:1}
-.sleep-min{font-size:11px;font-family:var(--fm);color:var(--muted);letter-spacing:1px}
-.sleep-quality{font-size:9px;font-family:var(--fm);letter-spacing:2px;margin-top:3px}
-.sleep-timeline{display:flex;flex-direction:column;gap:9px;margin-bottom:12px}
-.sleep-row{display:flex;align-items:center;gap:11px;padding:10px 13px;background:var(--bg3);border:1px solid var(--border);border-radius:10px}
-.sleep-row-ico{font-size:18px;flex-shrink:0}
-.sleep-row-info{flex:1}
-.sleep-row-label{font-size:12px;font-weight:700;margin-bottom:1px}
-.sleep-row-sub{font-family:var(--fm);font-size:9px;color:var(--muted);line-height:1.4}
-.sleep-row-time{font-family:var(--fm);font-size:13px;font-weight:600;flex-shrink:0}
-.sleep-row-time.warn{color:var(--orange)}.sleep-row-time.good{color:var(--green)}
-.sleep-debt-bar{height:7px;border-radius:4px;background:var(--bg3);overflow:hidden;margin:6px 0 3px}
-.sleep-debt-fill{height:100%;border-radius:4px;transition:width .8s cubic-bezier(.34,1.56,.64,1)}
-.phase-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:11px}
-.phase-card{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:11px}
-.phase-icon{font-size:17px;margin-bottom:3px}
-.phase-name{font-size:11px;font-weight:700;margin-bottom:2px}
-.phase-sub{font-family:var(--fm);font-size:9px;color:var(--muted);line-height:1.4}
-.sleep-log-entry{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.03);font-family:var(--fm)}
-.sleep-log-entry:last-child{border-bottom:none}
-.caff-timeline{position:relative;padding-left:18px;margin:10px 0}
-.caff-timeline::before{content:'';position:absolute;left:5px;top:0;bottom:0;width:2px;background:var(--border);border-radius:1px}
-.caff-dot{display:flex;align-items:flex-start;gap:9px;margin-bottom:12px;position:relative}
-.caff-dot::before{content:'';position:absolute;left:-14px;top:4px;width:7px;height:7px;border-radius:50%;border:2px solid var(--border);background:var(--bg)}
-.caff-dot.ok::before{border-color:var(--green);background:var(--green)}
-.caff-dot.warn::before{border-color:var(--accent);background:var(--accent)}
-.caff-dot.bad::before{border-color:var(--red);background:var(--red)}
-.caff-time{font-family:var(--fm);font-size:10px;color:var(--muted);min-width:40px;padding-top:1px}
-.caff-label{font-size:12px;font-weight:600;margin-bottom:1px}
-.caff-sub{font-family:var(--fm);font-size:9px;color:var(--muted)}
-
-/* SHEETS SETUP */
-.setup-step{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)}
-.setup-step:last-child{border-bottom:none}
-.step-num{width:24px;height:24px;border-radius:50%;background:var(--accent);color:#07070f;font-family:var(--fm);font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
-.step-body{}
-.step-title{font-size:13px;font-weight:700;margin-bottom:3px}
-.step-sub{font-family:var(--fm);font-size:10px;color:var(--muted);line-height:1.55}
-.step-link{color:var(--blue);text-decoration:none;word-break:break-all}
-.step-link:hover{text-decoration:underline}
-.code-block{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:8px 10px;font-family:var(--fm);font-size:10px;color:var(--accent);margin-top:6px;word-break:break-all;line-height:1.5}
-
-/* MODAL */
-.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:100;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);align-items:flex-end;justify-content:center}
-.modal-overlay.show{display:flex}
-.modal{background:var(--bg2);border:1px solid var(--border);border-radius:20px 20px 0 0;padding:20px 20px 44px;width:100%;max-width:480px;max-height:88vh;overflow-y:auto;animation:slideUp .28s cubic-bezier(.34,1.56,.64,1)}
-@keyframes slideUp{from{transform:translateY(80px);opacity:0}to{transform:translateY(0);opacity:1}}
-.modal-handle{width:34px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 18px}
-.modal h2{font-size:19px;font-weight:800;margin-bottom:5px}
-.modal-sub{font-family:var(--fm);font-size:11px;color:var(--muted);margin-bottom:14px;line-height:1.6}
-.ai-lbl{font-family:var(--fm);font-size:8px;letter-spacing:3px;color:var(--accent);margin-bottom:7px;font-weight:600}
-.ai-resp{background:var(--bg3);border:1px solid rgba(200,255,62,.18);border-radius:11px;padding:14px;font-family:var(--fm);font-size:11px;color:var(--text);line-height:1.75;margin-bottom:12px;min-height:56px;white-space:pre-wrap;word-break:break-word}
-.ai-resp.loading{color:var(--muted);animation:pulse 1.4s infinite}
-@keyframes pulse{0%,100%{opacity:.4}50%{opacity:1}}
-.exp-code{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:13px;font-family:var(--fm);font-size:9px;color:var(--blue);word-break:break-all;white-space:pre-wrap;max-height:170px;overflow-y:auto;margin-bottom:13px;line-height:1.5}
-
-/* TIPS */
-.tip{border-radius:10px;padding:11px 13px;font-family:var(--fm);font-size:10px;line-height:1.55;margin-bottom:11px}
-.tip-blue{background:rgba(62,212,255,.05);border:1px solid rgba(62,212,255,.18);color:var(--blue)}
-.tip-orange{background:rgba(255,107,62,.05);border:1px solid rgba(255,107,62,.18);color:var(--orange)}
-.tip-purple{background:rgba(167,139,250,.05);border:1px solid rgba(167,139,250,.18);color:var(--purple)}
-.tip-green{background:rgba(62,255,170,.05);border:1px solid rgba(62,255,170,.18);color:var(--green)}
-
-/* UTILS */
-.div{height:1px;background:var(--border);margin:12px 0}
-.fb{display:flex;justify-content:space-between;align-items:center}
-.fg{display:flex;gap:7px}
-.sm{font-family:var(--fm);font-size:10px}
-.green{color:var(--green)}.red{color:var(--red)}.acc{color:var(--accent)}.mut{color:var(--muted)}.purple{color:var(--purple)}.blue{color:var(--blue)}
-::-webkit-scrollbar{width:3px}
-::-webkit-scrollbar-track{background:transparent}
-::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+/* HEATMAP */
+.heatmap{display:grid;grid-template-columns:repeat(auto-fit, minmax(60px, 1fr));gap:6px;margin-top:10px}
+.hm-item{padding:6px;font-size:8px;text-align:center;border-radius:4px;background:var(--bg3);color:var(--muted)}
 </style>
 </head>
 <body>
 
-<div class="auth-screen" id="authScreen">
-  <div class="auth-logo">APEX SYSTEM v4</div>
-  <h1 class="auth-title">HASSAN<br><em>PROTOCOL</em></h1>
-  <p class="auth-sub">Sign in with Google to sync your training, nutrition, sleep and body data across all your devices via Google Sheets.</p>
+<div id="restTimerOverlay" onclick="stopRestTimer()">0:00</div>
 
-  <div class="auth-card">
-    <div class="auth-card-title">Connect Google Sheets</div>
-    <div class="auth-card-sub">Your data will be saved to a private Google Sheet in your own Google Drive. No one else can access it.</div>
-    <button class="btn-google" id="googleSignInBtn" onclick="handleSignIn()">
-      <svg class="google-logo" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-      </svg>
-      Continue with Google
-    </button>
-  </div>
-
-  <div id="clientIdMissing" class="alert al-orange show" style="max-width:340px;margin:0 0 12px">
-    <strong>⚙ SETUP REQUIRED</strong>
-    You need a Google OAuth Client ID to enable sign-in. See Settings → Google Sheets Setup for the 5-minute setup guide.
-  </div>
-
-  <button class="btn-outline" onclick="skipAuth()" style="max-width:340px;width:100%;font-size:12px;margin-bottom:12px">
-    Continue offline (localStorage only)
-  </button>
-
-  <p class="auth-note">Your data stays in your own Google Drive. APEX never stores your data on any external server. Each device remembers your login independently.</p>
+<div class="overlay-screen" id="authScreen">
+    <h1 style="font-size:32px;margin-bottom:8px">APEX <em>SYSTEM</em></h1>
+    <p style="color:var(--muted);margin-bottom:30px;font-size:12px">Closed-Loop Performance Architecture</p>
+    <button class="btn btn-p" onclick="handleSignIn()">Continue with Google</button>
+    <button onclick="skipAuth()" style="margin-top:20px;background:none;border:none;color:var(--muted);font-family:var(--fm);font-size:10px">Continue Offline</button>
 </div>
 
-<div class="sync-bar" id="syncBar">
-  <div class="sync-dot" id="syncDot"></div>
-  <span id="syncLabel">Offline mode — data saved locally</span>
-  <span class="sync-user" id="syncUser" onclick="promptSignOut()"></span>
+<div class="overlay-screen hidden" id="onboardScreen">
+    <h2 style="margin-bottom:12px">System Calibration</h2>
+    <p style="color:var(--muted);margin-bottom:20px;font-size:12px">Initialize biological profile for calorie and volume targets.</p>
+    <div style="display:flex;flex-direction:column;gap:12px;width:100%;max-width:300px">
+        <input type="number" id="obWeight" placeholder="Weight (kg)">
+        <input type="number" id="obHeight" placeholder="Height (cm)">
+        <input type="number" id="obAge" placeholder="Age">
+        <select id="obGoal">
+            <option value="hypertrophy">Hypertrophy (Muscle)</option>
+            <option value="strength">Absolute Strength</option>
+            <option value="loss">Fat Loss</option>
+        </select>
+        <button class="btn btn-p" onclick="finishOnboarding()">Initialize Protocol</button>
+    </div>
+</div>
+
+<div class="sync-bar" id="syncBar" style="padding:6px 20px;font-size:9px;color:var(--muted);border-bottom:1px solid var(--border);display:flex;justify-content:space-between">
+    <span id="syncStatus">○ System Ready</span>
+    <span id="userEmail"></span>
 </div>
 
 <div class="hdr">
-  <div class="hdr-row">
-    <div class="logo">APEX v4</div>
-    <div class="wk-badge" id="wkBadge">WEEK 1</div>
-  </div>
-  <h1>HASSAN <em>PROTOCOL</em></h1>
+    <div style="font-family:var(--fm);color:var(--accent);letter-spacing:4px;font-size:10px">APEX V5</div>
+    <h1 id="userName">GUEST <em>USER</em></h1>
 </div>
 
 <div class="tabs">
-  <button class="tab on"  onclick="swTab('dashboard',this)">Dash</button>
-  <button class="tab"     onclick="swTab('training',this)">Train</button>
-  <button class="tab"     onclick="swTab('nutrition',this)">Nutrition</button>
-  <button class="tab"     onclick="swTab('sleep',this)">Sleep</button>
-  <button class="tab"     onclick="swTab('settings',this)">Settings</button>
+    <button class="tab on" onclick="swTab('dashboard',this)">Dash</button>
+    <button class="tab" onclick="swTab('training',this)">Train</button>
+    <button class="tab" onclick="swTab('nutrition',this)">Nutr</button>
+    <button class="tab" onclick="swTab('sleep',this)">Sleep</button>
+    <button class="tab" onclick="swTab('settings',this)">Set</button>
 </div>
 
 <div class="panel on" id="panel-dashboard">
-  <div class="alert al-red" id="alertDeload"><strong>⚠ UNDER-RECOVERY — DELOAD REQUIRED</strong>3+ sessions missed. Next week: 50% volume, 60% intensity. Full movement patterns retained.</div>
-  <div class="alert al-yellow" id="alertRefeed"><strong>🔁 REFEED DAY</strong>Bump to 3,000 kcal. Carbs → 350g. Protein &amp; fat stay the same. Train hard today.</div>
-  <div class="alert al-purple" id="alertSleepDebt"><strong>😴 SLEEP DEBT DETECTED</strong>Weekend sleep debt accumulating. Recovery and fat loss both impaired. See Sleep tab.</div>
-  <div class="alert al-blue" id="alertApiMissing"><strong>🔑 ANTHROPIC API KEY MISSING</strong>Add your key in Settings to unlock AI weekly analysis.</div>
-
-  <div class="card t-green">
-    <div class="lbl">Today's Calories</div>
-    <div class="ring-wrap">
-      <svg width="80" height="80" viewBox="0 0 80 80" style="flex-shrink:0">
-        <circle cx="40" cy="40" r="32" fill="none" stroke="#141420" stroke-width="8"/>
-        <circle id="calRing" cx="40" cy="40" r="32" fill="none" stroke="#c8ff3e" stroke-width="8"
-          stroke-dasharray="201" stroke-dashoffset="201" stroke-linecap="round"
-          transform="rotate(-90 40 40)" style="transition:stroke-dashoffset .8s cubic-bezier(.34,1.56,.64,1)"/>
-      </svg>
-      <div>
-        <div class="ring-lbl">Remaining</div>
-        <div class="ring-num"><span id="calRem">2400</span></div>
-        <div class="ring-sub mut"><span id="calLog">0</span> / 2400 kcal</div>
-      </div>
+    <div class="card glass">
+        <div style="display:flex;align-items:center;gap:20px">
+            <svg width="80" height="80" viewBox="0 0 80 80">
+                <circle cx="40" cy="40" r="32" fill="none" stroke="#141420" stroke-width="8"/>
+                <circle id="calRing" cx="40" cy="40" r="32" fill="none" stroke="var(--accent)" stroke-width="8" stroke-dasharray="201" stroke-dashoffset="201" stroke-linecap="round" transform="rotate(-90 40 40)"/>
+            </svg>
+            <div>
+                <div style="font-size:10px;color:var(--muted);letter-spacing:2px">REMAINING</div>
+                <div style="font-size:28px;font-weight:800" id="dashCalRem">0</div>
+                <div style="font-size:10px;color:var(--muted)" id="dashCalLog">0 / 0 kcal</div>
+            </div>
+        </div>
     </div>
-  </div>
 
-  <div class="card">
-    <div class="lbl">Week at a Glance</div>
-    <div class="wg" id="wkGrid"></div>
-    <div class="fb" style="margin-top:9px"><span class="sm mut">Sessions done</span><span class="sm acc" id="sessCount">0 / 5</span></div>
-    <div class="rec-bar" id="recBar"></div>
-    <div class="sm mut" id="recLabel">Recovery: OPTIMAL</div>
-  </div>
-
-  <div class="sg">
-    <div class="sc"><div class="sc-lbl">Body Weight</div><div class="sc-val" id="wtVal">84.0<span>kg</span></div><div class="sc-sub mut" id="wtDelta">Baseline</div></div>
-    <div class="sc"><div class="sc-lbl">Sleep Last Night</div><div class="sc-val purple" id="dashSleep">—<span>hrs</span></div><div class="sc-sub mut" id="dashSleepLbl">Not logged</div></div>
-    <div class="sc"><div class="sc-lbl">Protein Today</div><div class="sc-val acc" id="dashProt">0<span>g</span></div><div class="sc-sub mut">Target: 210g</div></div>
-    <div class="sc"><div class="sc-lbl">Week / Day</div><div class="sc-val" id="wkNum">1</div><div class="sc-sub mut" id="dayLbl">Day 1 of 7</div></div>
-  </div>
-
-  <div class="card">
-    <div class="lbl">Log Body Weight</div>
-    <div style="display:flex;gap:7px;margin-bottom:11px">
-      <div class="ig" style="flex:1"><div class="il">Weight (kg)</div><input type="number" id="wtIn" placeholder="84.0" step="0.1" min="40" max="250"></div>
-      <div style="display:flex;align-items:flex-end"><button class="btn btn-primary" onclick="logWeight()" style="height:42px;padding:0 16px">Log</button></div>
+    <div class="card glass">
+        <div style="font-size:10px;color:var(--muted);letter-spacing:2px;margin-bottom:10px">VOLUME HEATMAP (7D)</div>
+        <div class="heatmap" id="muscleHeatmap"></div>
     </div>
-    <div id="wtLog"></div>
-  </div>
 
-  <div class="card">
-    <div class="lbl">System Actions</div>
-    <div style="display:flex;flex-direction:column;gap:7px">
-      <button class="btn-ai btn" onclick="openWeeklyAI()">⚡ AI WEEKLY ANALYSIS + ADJUST</button>
-      <button class="btn btn-outline" onclick="openExport()">📤 Export JSON</button>
-      <button class="btn btn-outline" onclick="openImport()">📥 Import JSON</button>
-      <button class="btn btn-outline" onclick="nextDay()">→ Advance Day</button>
-      <button class="btn btn-danger" onclick="confirmReset()">↺ Reset Week</button>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="card glass"><div style="font-size:8px;color:var(--muted)">WEIGHT</div><div style="font-size:20px;font-weight:800" id="dashWt">--</div></div>
+        <div class="card glass"><div style="font-size:8px;color:var(--muted)">PROTEIN</div><div style="font-size:20px;font-weight:800" id="dashProt">--</div></div>
     </div>
-  </div>
 </div>
 
 <div class="panel" id="panel-training">
-  <div class="tip tip-blue">🔄 PREHAB before every Push session — Band External Rotation 2×15 each side + Face Pulls 2×20 light cable.</div>
-  <div class="tip tip-orange">🚴 Cycling day: +100–150 kcal burned. Add a small carb snack (banana, rice cake). Don't eat back the full deficit.</div>
-  <div id="sessionList"></div>
+    <div id="sessionList"></div>
 </div>
 
 <div class="panel" id="panel-nutrition">
-  <div class="tip tip-orange">🫃 GI PROTOCOL — No onion/garlic raw (use garlic-infused oil). Limit legumes. Cut ALL carbonated drinks including sparkling water. Try lactose-free dairy.</div>
-  <div class="card t-blue">
-    <div class="lbl">Daily Macro Targets</div>
-    <div class="mc-row">
-      <div class="mc"><div class="mc-ico">🥩</div><div class="mc-n">Protein</div><div class="mc-v" style="color:var(--protein)">210<span style="font-size:11px;color:var(--muted)">g</span></div><div class="mc-t">840 kcal</div></div>
-      <div class="mc"><div class="mc-ico">🍚</div><div class="mc-n">Carbs</div><div class="mc-v" style="color:var(--carbs)">233<span style="font-size:11px;color:var(--muted)">g</span></div><div class="mc-t">930 kcal</div></div>
-      <div class="mc"><div class="mc-ico">🥑</div><div class="mc-n">Fat</div><div class="mc-v" style="color:var(--fat)">70<span style="font-size:11px;color:var(--muted)">g</span></div><div class="mc-t">630 kcal</div></div>
-    </div>
-    <div class="div"></div>
-    <div class="fb sm"><span class="mut">Daily total</span><span class="acc" style="font-size:15px;font-weight:800">2,400 kcal</span></div>
-    <div class="fb sm" style="margin-top:5px"><span class="mut">Refeed (Day 7)</span><span>3,000 kcal · 350g carbs</span></div>
-    <div class="fb sm" style="margin-top:5px"><span class="mut">Cycling day</span><span class="blue">2,550 kcal max</span></div>
-  </div>
-  <div class="card">
-    <div class="lbl">Log Today's Intake</div>
-    <div class="input-grid">
-      <div class="ig"><div class="il">Calories</div><input type="number" id="nCal" placeholder="0" min="0" max="5000"></div>
-      <div class="ig"><div class="il">Protein (g)</div><input type="number" id="nProt" placeholder="0" min="0" max="500"></div>
-      <div class="ig"><div class="il">Carbs (g)</div><input type="number" id="nCarb" placeholder="0" min="0" max="800"></div>
-      <div class="ig"><div class="il">Fat (g)</div><input type="number" id="nFat" placeholder="0" min="0" max="300"></div>
-    </div>
-    <button class="btn btn-full" onclick="logNutrition()">Log Nutrition</button>
-  </div>
-  <div class="card">
-    <div class="lbl">Today's Progress</div>
-    <div class="pb-wrap"><div class="pb-lbl"><span>Calories</span><span id="lbCal">0/2400 kcal</span></div><div class="pb-track"><div class="pb-fill" id="pbCal" style="width:0%;background:var(--accent)"></div></div></div>
-    <div class="pb-wrap"><div class="pb-lbl"><span>Protein</span><span id="lbProt">0/210g</span></div><div class="pb-track"><div class="pb-fill" id="pbProt" style="width:0%;background:var(--protein)"></div></div></div>
-    <div class="pb-wrap"><div class="pb-lbl"><span>Carbs</span><span id="lbCarb">0/233g</span></div><div class="pb-track"><div class="pb-fill" id="pbCarb" style="width:0%;background:var(--carbs)"></div></div></div>
-    <div class="pb-wrap"><div class="pb-lbl"><span>Fat</span><span id="lbFat">0/70g</span></div><div class="pb-track"><div class="pb-fill" id="pbFat" style="width:0%;background:var(--fat)"></div></div></div>
-  </div>
-  <div class="card">
-    <div class="lbl">Meal Checklist</div>
-    <div class="tog-item"><div class="tog-info"><div class="tog-name">Breakfast</div><div class="tog-sub">3 eggs + 150g Greek yogurt + fruit — ~40g protein</div></div><div class="tog" id="meal-0" onclick="togMeal(0)"></div></div>
-    <div class="tog-item"><div class="tog-info"><div class="tog-name">Lunch</div><div class="tog-sub">Chicken/turkey 200g + rice + olive oil veg — ~60g protein</div></div><div class="tog" id="meal-1" onclick="togMeal(1)"></div></div>
-    <div class="tog-item"><div class="tog-info"><div class="tog-name">Pre-Workout (6:30pm)</div><div class="tog-sub">Rice cakes + cottage cheese or banana + whey — ~30g protein</div></div><div class="tog" id="meal-2" onclick="togMeal(2)"></div></div>
-    <div class="tog-item"><div class="tog-info"><div class="tog-name">Post-Workout Dinner</div><div class="tog-sub">Lean beef/chicken 200g + roasted veg within 60 min — ~60g protein</div></div><div class="tog" id="meal-3" onclick="togMeal(3)"></div></div>
-    <div class="tog-item"><div class="tog-info"><div class="tog-name">Evening Protein</div><div class="tog-sub">Casein shake or cottage cheese before 10pm — ~30g protein</div></div><div class="tog" id="meal-4" onclick="togMeal(4)"></div></div>
-  </div>
-  <div class="card">
-    <div class="lbl">Daily Supplements</div>
-    <div class="tog-item"><div class="tog-info"><div class="tog-name">Creatine Monohydrate</div><div class="tog-sub">5g/day — with breakfast or post-workout</div></div><div class="tog" id="supp-0" onclick="togSupp(0)"></div></div>
-    <div class="tog-item"><div class="tog-info"><div class="tog-name">Vitamin D3 + K2</div><div class="tog-sub">3,000 IU with fat — London deficiency year-round</div></div><div class="tog" id="supp-1" onclick="togSupp(1)"></div></div>
-    <div class="tog-item"><div class="tog-info"><div class="tog-name">Omega-3</div><div class="tog-sub">2–3g EPA+DHA — rotator cuff support</div></div><div class="tog" id="supp-2" onclick="togSupp(2)"></div></div>
-    <div class="tog-item"><div class="tog-info"><div class="tog-name">Magnesium Glycinate</div><div class="tog-sub">400mg 30–60 min before bed — sleep + recovery</div></div><div class="tog" id="supp-3" onclick="togSupp(3)"></div></div>
-    <div class="tog-item"><div class="tog-info"><div class="tog-name">Whey Protein</div><div class="tog-sub">Only if short of 210g from whole food</div></div><div class="tog" id="supp-4" onclick="togSupp(4)"></div></div>
-  </div>
-  <div class="card t-orange">
-    <div class="lbl">Free Tracking Stack — 2026</div>
-    <div class="tog-item"><div class="tog-info"><div class="tog-name">Cronometer (Free)</div><div class="tog-sub">Best free macro tracker. Syncs directly with Garmin Connect — activity auto-adjusts your daily targets.</div></div></div>
-    <div class="tog-item"><div class="tog-info"><div class="tog-name">Hevy (Free)</div><div class="tog-sub">Best free gym log. Unlimited logging, progress charts, no ads. Pro optional.</div></div></div>
-    <div class="tog-item"><div class="tog-info"><div class="tog-name">Garmin Connect (Free)</div><div class="tog-sub">Already have it. HRV, sleep stages, Body Battery, VO2 max — replaces Whoop/Oura entirely.</div></div></div>
-  </div>
-</div>
-
-<div class="panel" id="panel-sleep">
-  <div class="card t-purple">
-    <div class="lbl">Sleep Architecture</div>
-    <div class="sleep-clock">
-      <div class="sleep-arc-wrap">
-        <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="100" cy="100" r="80" fill="none" stroke="#141420" stroke-width="14"/>
-          <circle cx="100" cy="100" r="80" fill="none" stroke="#1e1e35" stroke-width="14" stroke-dasharray="502" stroke-dashoffset="0" stroke-linecap="round" transform="rotate(-90 100 100)"/>
-          <circle id="sleepArc" cx="100" cy="100" r="80" fill="none" stroke="#a78bfa" stroke-width="14" stroke-dasharray="502" stroke-dashoffset="502" stroke-linecap="round" transform="rotate(-90 100 100)" style="transition:stroke-dashoffset 1s cubic-bezier(.34,1.56,.64,1)"/>
-          <line x1="100" y1="8" x2="100" y2="22" stroke="#3effaa" stroke-width="3" stroke-linecap="round" transform="rotate(270 100 100)"/>
-        </svg>
-        <div class="sleep-center">
-          <div class="sleep-hrs" id="sleepHrsDisplay">—</div>
-          <div class="sleep-min" id="sleepMinDisplay">HRS LOGGED</div>
-          <div class="sleep-quality" id="sleepQualityLabel" style="color:var(--muted)">LOG SLEEP</div>
+    <div class="card glass">
+        <div style="font-size:10px;color:var(--muted);margin-bottom:15px">LOG MACROS</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+            <input type="number" id="nCal" placeholder="Cals">
+            <input type="number" id="nProt" placeholder="Prot">
         </div>
-      </div>
+        <button class="btn btn-p" onclick="logNutrition()">Log Intake</button>
     </div>
-    <div class="input-grid" style="margin-bottom:8px">
-      <div class="ig"><div class="il">Bedtime</div><input type="time" id="sleepBed" value="23:00"></div>
-      <div class="ig"><div class="il">Wake time</div><input type="time" id="sleepWake" value="06:45"></div>
-    </div>
-    <button class="btn btn-full" onclick="logSleep()" style="background:var(--purple);color:#07070f;margin-bottom:8px">Log Sleep</button>
-    <div class="sleep-debt-bar"><div class="sleep-debt-fill" id="debtBar" style="width:0%;background:var(--green)"></div></div>
-    <div class="fb sm"><span class="mut">Weekly sleep debt</span><span id="debtLabel" class="green">0 hrs</span></div>
-  </div>
-
-  <div class="card">
-    <div class="lbl">Your Optimised Schedule</div>
-    <div class="sleep-timeline">
-      <div class="sleep-row"><div class="sleep-row-ico">🏋️</div><div class="sleep-row-info"><div class="sleep-row-label">Workout ends</div><div class="sleep-row-sub">Cortisol elevated — wind-down begins now.</div></div><div class="sleep-row-time warn">~8:30pm</div></div>
-      <div class="sleep-row"><div class="sleep-row-ico">💊</div><div class="sleep-row-info"><div class="sleep-row-label">Magnesium Glycinate 400mg</div><div class="sleep-row-sub">Promotes GABA — counteracts training cortisol spike.</div></div><div class="sleep-row-time good">9:00pm</div></div>
-      <div class="sleep-row"><div class="sleep-row-ico">📵</div><div class="sleep-row-info"><div class="sleep-row-label">Blue light off</div><div class="sleep-row-sub">Night Mode or glasses. Melatonin production starts.</div></div><div class="sleep-row-time good">9:30pm</div></div>
-      <div class="sleep-row"><div class="sleep-row-ico">🥛</div><div class="sleep-row-info"><div class="sleep-row-label">Casein / cottage cheese</div><div class="sleep-row-sub">Slow-digesting protein feeds muscles ~7hrs overnight.</div></div><div class="sleep-row-time good">9:30pm</div></div>
-      <div class="sleep-row"><div class="sleep-row-ico">🌙</div><div class="sleep-row-info"><div class="sleep-row-label">Target bedtime — Weekdays</div><div class="sleep-row-sub">11pm → 6:45am = 7h45m. Build from current 12am over 2 weeks.</div></div><div class="sleep-row-time good">11:00pm</div></div>
-      <div class="sleep-row"><div class="sleep-row-ico">🎉</div><div class="sleep-row-info"><div class="sleep-row-label">Weekend maximum</div><div class="sleep-row-sub">Cap at 1am. Beyond this creates debt that wrecks Mon–Tue recovery.</div></div><div class="sleep-row-time warn">1:00am</div></div>
-      <div class="sleep-row"><div class="sleep-row-ico">⏰</div><div class="sleep-row-info"><div class="sleep-row-label">Weekend wake — keep consistent</div><div class="sleep-row-sub">8:30am max. Sleeping past 9:30am shifts your circadian rhythm.</div></div><div class="sleep-row-time warn">8:30am</div></div>
-    </div>
-  </div>
-
-  <div class="card">
-    <div class="lbl">Caffeine Protocol</div>
-    <div class="caff-timeline">
-      <div class="caff-dot ok"><div class="caff-time">9:00am</div><div><div class="caff-label">Coffee #1 ✓</div><div class="caff-sub">Cortisol peaks 8–9am — coffee here amplifies, doesn't replace, your alertness.</div></div></div>
-      <div class="caff-dot warn"><div class="caff-time">12:00pm</div><div><div class="caff-label">Coffee #2 — acceptable</div><div class="caff-sub">~50mg still active at 6pm. Manageable if you cap here.</div></div></div>
-      <div class="caff-dot bad"><div class="caff-time">3:00pm</div><div><div class="caff-label">Coffee #3 — CUT THIS ✗</div><div class="caff-sub">~100mg circulating at 9pm. Reduces deep sleep by up to 20%. Your single biggest sleep lever.</div></div></div>
-      <div class="caff-dot ok"><div class="caff-time">Evening</div><div><div class="caff-label">Decaf tea ✓</div><div class="caff-sub">Good. Verify it's truly decaf — some still have 15–30mg.</div></div></div>
-    </div>
-  </div>
-
-  <div class="card">
-    <div class="lbl">Sleep Phase Targets (7h45m)</div>
-    <div class="phase-grid">
-      <div class="phase-card"><div class="phase-icon">🌊</div><div class="phase-name">Deep Sleep (SWS)</div><div class="phase-sub">~90 min. Growth hormone released. Physical repair. Muscle rebuilt here.</div></div>
-      <div class="phase-card"><div class="phase-icon">🌀</div><div class="phase-name">REM Sleep</div><div class="phase-sub">~105 min. Motor pattern consolidation. Gym technique improves during REM.</div></div>
-      <div class="phase-card"><div class="phase-icon">😴</div><div class="phase-name">Light Sleep</div><div class="phase-sub">~270 min. Necessary scaffolding between stages.</div></div>
-      <div class="phase-card"><div class="phase-icon">📱</div><div class="phase-name">Check Garmin</div><div class="phase-sub">Body Battery below 60 on waking = reduce training intensity today.</div></div>
-    </div>
-  </div>
-
-  <div class="card">
-    <div class="lbl">Sleep History</div>
-    <div id="sleepLog"><div class="sm mut" style="padding:8px 0">No sleep logged yet.</div></div>
-  </div>
-
-  <div class="card">
-    <div class="lbl">2-Week Bedtime Shift</div>
-    <div class="tog-item"><div class="tog-info"><div class="tog-name">Week 1, Days 1–3</div><div class="tog-sub">Target: 11:45pm. Wake: 7:00am. No snooze.</div></div></div>
-    <div class="tog-item"><div class="tog-info"><div class="tog-name">Week 1, Days 4–7</div><div class="tog-sub">Target: 11:30pm. Wake: 6:52am. Cut 3pm coffee this week.</div></div></div>
-    <div class="tog-item"><div class="tog-info"><div class="tog-name">Week 2, Days 1–4</div><div class="tog-sub">Target: 11:15pm. Wake: 6:45am. Magnesium every night.</div></div></div>
-    <div class="tog-item"><div class="tog-info"><div class="tog-name">Week 2, Days 5–7</div><div class="tog-sub">Target: 11:00pm. Wake: 6:45am. Grogginess should largely resolve.</div></div></div>
-  </div>
 </div>
 
 <div class="panel" id="panel-settings">
-
-  <div class="card t-blue" id="googleAccountCard">
-    <div class="lbl">Google Account</div>
-    <div id="googleAccountStatus">
-      <div class="fb" style="margin-bottom:10px">
-        <div><div style="font-size:14px;font-weight:700" id="googleUserName">Not signed in</div><div class="sm mut" id="googleUserEmail"></div></div>
-        <div id="googleAvatarWrap"></div>
-      </div>
-      <div id="googleSignedInActions" style="display:none;flex-direction:column;gap:7px">
-        <div class="tip tip-green" style="margin-bottom:0">✓ Syncing to Google Sheets in real-time. Your data is backed up across all devices.</div>
-        <div class="sm mut" style="margin-top:8px">Sheet: <span id="sheetLink" class="blue" style="cursor:pointer" onclick="openSheet()">View your data sheet →</span></div>
-        <button class="btn btn-outline" onclick="forceSyncNow()" style="margin-top:4px">↑ Force Sync Now</button>
-        <button class="btn btn-danger" onclick="promptSignOut()">Sign Out</button>
-      </div>
-      <div id="googleSignedOutActions">
-        <button class="btn-google btn" onclick="handleSignIn()" style="width:100%;display:flex;align-items:center;justify-content:center;gap:9px;background:#fff;color:#1f1f1f;padding:12px">
-          <svg width="18" height="18" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
-          Sign in with Google
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <div class="card t-green">
-    <div class="lbl">Google Sheets Setup — 5 Min Guide</div>
-    <div class="tip tip-blue" style="margin-bottom:12px">You need a Google Cloud OAuth Client ID. This is free and takes 5 minutes. Follow these steps exactly.</div>
-
-    <div class="setup-step">
-      <div class="step-num">1</div>
-      <div class="step-body">
-        <div class="step-title">Go to Google Cloud Console</div>
-        <div class="step-sub">Open this link on your laptop (easier than phone):<br><a class="step-link" href="https://console.cloud.google.com" target="_blank">console.cloud.google.com</a></div>
-      </div>
-    </div>
-
-    <div class="setup-step">
-      <div class="step-num">2</div>
-      <div class="step-body">
-        <div class="step-title">Create a new project</div>
-        <div class="step-sub">Click the project dropdown at the top → "New Project" → name it <strong>APEX Protocol</strong> → Create.</div>
-      </div>
-    </div>
-
-    <div class="setup-step">
-      <div class="step-num">3</div>
-      <div class="step-body">
-        <div class="step-title">Enable Google Sheets API</div>
-        <div class="step-sub">Go to APIs &amp; Services → Library → search "Google Sheets API" → Enable it.</div>
-      </div>
-    </div>
-
-    <div class="setup-step">
-      <div class="step-num">4</div>
-      <div class="step-body">
-        <div class="step-title">Create OAuth credentials</div>
-        <div class="step-sub">APIs &amp; Services → Credentials → Create Credentials → OAuth Client ID → Web Application.<br><br>
-        Under <strong>Authorised JavaScript origins</strong>, add your GitHub domain:<br></div>
-        <div class="code-block">https://nassa7.github.io</div>
-      </div>
-    </div>
-
-    <div class="setup-step">
-      <div class="step-num">5</div>
-      <div class="step-body">
-        <div class="step-title">Configure OAuth consent screen</div>
-        <div class="step-sub">APIs &amp; Services → OAuth consent screen → External → fill in App name (APEX Protocol), your email. Add scopes: <strong>../auth/spreadsheets</strong> and <strong>../auth/drive.file</strong>. Add your email as a test user.</div>
-      </div>
-    </div>
-
-    <div class="setup-step">
-      <div class="step-num">6</div>
-      <div class="step-body">
-        <div class="step-title">Copy your Client ID and paste it below</div>
-        <div class="step-sub">Back on the Credentials page, copy your Client ID (ends in .apps.googleusercontent.com).</div>
-      </div>
-    </div>
-
-    <div class="div"></div>
-    <div class="ig" style="margin-bottom:11px">
-      <div class="il">Google OAuth Client ID</div>
-      <input type="text" id="clientIdInput" placeholder="xxxx.apps.googleusercontent.com" autocomplete="off">
-    </div>
-    <button class="btn btn-full" onclick="saveClientId()">Save Client ID &amp; Enable Sign-In</button>
-    <div class="sm mut" id="clientIdStatus" style="margin-top:9px;text-align:center"></div>
-  </div>
-
-  <div class="card">
-    <div class="lbl">Anthropic API Key</div>
-    <p class="sm mut" style="margin-bottom:11px;line-height:1.65">For AI weekly analysis. Stored only in localStorage — sent only to api.anthropic.com. Set a £5/mo spend cap at console.anthropic.com.</p>
-    <div class="ig" style="margin-bottom:11px"><div class="il">API Key</div><input type="password" id="apiKeyIn" placeholder="sk-ant-..." autocomplete="off"></div>
-    <button class="btn btn-full" onclick="saveApiKey()">Save API Key</button>
-    <div class="sm mut" id="apiStatus" style="margin-top:9px;text-align:center"></div>
-  </div>
-
-  <div class="card">
-    <div class="lbl">Data Management</div>
-    <div style="display:flex;flex-direction:column;gap:7px">
-      <button class="btn btn-outline" onclick="openExport()">📤 Export JSON</button>
-      <button class="btn btn-outline" onclick="openImport()">📥 Import JSON</button>
-      <button class="btn btn-danger" onclick="confirmFullReset()">⚠ Factory Reset All Data</button>
-    </div>
-  </div>
-</div>
-
-<div class="modal-overlay" id="modalExport">
-  <div class="modal">
-    <div class="modal-handle"></div>
-    <h2>Export JSON</h2>
-    <p class="modal-sub">Full snapshot. Copy and save somewhere safe as your manual backup.</p>
-    <div class="exp-code" id="expCode"></div>
-    <button class="btn btn-full" onclick="copyExport()" id="copyBtn" style="margin-bottom:7px">Copy JSON</button>
-    <button class="btn btn-outline" onclick="closeModal('modalExport')">Close</button>
-  </div>
-</div>
-
-<div class="modal-overlay" id="modalImport">
-  <div class="modal">
-    <div class="modal-handle"></div>
-    <h2>Import JSON</h2>
-    <p class="modal-sub">Paste a previously exported JSON snapshot. This will merge with your current data — historical entries are preserved, newer entries take priority.</p>
-    <div class="ig" style="margin-bottom:11px">
-      <div class="il">Paste JSON here</div>
-      <textarea id="importText" placeholder='{"week":1,"dow":0,...}'></textarea>
-    </div>
-    <button class="btn btn-full" onclick="doImport()" style="margin-bottom:7px">Merge &amp; Import</button>
-    <button class="btn btn-outline" onclick="closeModal('modalImport')">Cancel</button>
-    <div id="importStatus" class="sm mut" style="margin-top:9px;text-align:center"></div>
-  </div>
-</div>
-
-<div class="modal-overlay" id="modalAI">
-  <div class="modal">
-    <div class="modal-handle"></div>
-    <h2>⚡ AI Weekly Analysis</h2>
-    <p class="modal-sub">Claude analyses sessions, nutrition, sleep, and weight trend — then prescribes specific next-week adjustments.</p>
-    <div class="ai-lbl">APEX INTELLIGENCE — WEEK <span id="aiWkNum">1</span> DEBRIEF</div>
-    <div class="ai-resp" id="aiResp">Tap the button below to run your weekly analysis...</div>
-    <button class="btn-ai btn" onclick="runAI()" id="aiBtn" style="margin-bottom:7px">▶ RUN ANALYSIS</button>
-    <button class="btn btn-outline" onclick="closeModal('modalAI')">Close</button>
-  </div>
+    <button class="btn" style="background:var(--red);color:#000" onclick="signOut()">Sign Out</button>
+    <button class="btn" style="margin-top:10px;background:var(--bg3);color:var(--text)" onclick="confirmFullReset()">Reset System</button>
 </div>
 
 <script>
-// ═══════════════ CONSTANTS / DEFS ═══════════════
-const TARGETS = {cal:2400,protein:210,carbs:233,fat:70};
-const DAY_LABELS = ['MON','TUE','WED','THU','FRI','SAT','SUN'];
-const TRAIN_DAYS = [0,1,2,3,4];
-const SLEEP_TARGET = 7.75;
-const SHEET_NAME = 'APEX_Protocol_Data';
-
+// INITIAL DEFINITIONS
 const SESSIONS_DEF = [
-  {day:'Day 1 — Monday',name:'PUSH',focus:'Chest · Shoulders · Triceps',exercises:[
-    {name:'Incline DB Press',note:'',sets:'4×8–10',rpe:'8',tempo:'3-1-X-0'},
-    {name:'Cable Chest Fly',note:'Low to high',sets:'3×12–15',rpe:'7',tempo:'2-1-2-0'},
-    {name:'Seated DB Shoulder Press',note:'',sets:'3×10–12',rpe:'8',tempo:'3-0-X-0'},
-    {name:'Cable Lateral Raise',note:'Unilateral',sets:'4×15–20',rpe:'7',tempo:'2-0-2-1'},
-    {name:'OHT Extension',note:'Cable rope',sets:'3×12–15',rpe:'8',tempo:'2-1-X-0'},
-    {name:'Tricep Pushdown',note:'Straight bar',sets:'3×15',rpe:'7',tempo:'2-0-X-0'}
-  ]},
-  {day:'Day 2 — Tuesday',name:'PULL',focus:'Back · Biceps · Rear Delts',exercises:[
-    {name:'Seated Cable Row',note:'Wide grip',sets:'4×8–10',rpe:'8',tempo:'2-1-X-1'},
-    {name:'Lat Pulldown',note:'Neutral grip',sets:'4×10–12',rpe:'8',tempo:'2-1-X-0'},
-    {name:'Single Arm DB Row',note:'',sets:'3×10–12',rpe:'8',tempo:'2-0-X-1'},
-    {name:'Face Pull',note:'Rope, high cable',sets:'3×20',rpe:'6',tempo:'2-1-2-1'},
-    {name:'Incline DB Curl',note:'',sets:'3×10–12',rpe:'8',tempo:'3-0-X-1'},
-    {name:'Hammer Curl',note:'',sets:'3×12–15',rpe:'7',tempo:'2-0-X-0'}
-  ]},
-  {day:'Day 3 — Wednesday',name:'LEGS',focus:'Quad Dominant · Hamstrings · Calves',exercises:[
-    {name:'Leg Press',note:'Shoulder-width feet',sets:'4×10–12',rpe:'8',tempo:'3-1-X-0'},
-    {name:'Hack / Smith Squat',note:'',sets:'3×8–10',rpe:'8',tempo:'3-1-X-0'},
-    {name:'Leg Extension',note:'',sets:'4×15–20',rpe:'7',tempo:'2-1-2-1'},
-    {name:'Romanian DL',note:'DB, hinge focus',sets:'3×10–12',rpe:'7',tempo:'3-1-X-0'},
-    {name:'Leg Curl',note:'Seated or lying',sets:'3×12–15',rpe:'8',tempo:'2-1-2-1'},
-    {name:'Standing Calf Raise',note:'Bilateral, heel planted',sets:'4×15–20',rpe:'7',tempo:'2-1-3-0'}
-  ]},
-  {day:'Day 4 — Thursday',name:'UPPER',focus:'Strength Focus',exercises:[
-    {name:'Flat DB Press',note:'',sets:'4×6–8',rpe:'9',tempo:'3-1-X-0'},
-    {name:'Weighted Pull-Up',note:'Or assisted',sets:'4×6–8',rpe:'9',tempo:'2-0-X-1'},
-    {name:'Cable Row',note:'Close grip',sets:'3×8–10',rpe:'8',tempo:'2-1-X-1'},
-    {name:'Lateral Raise',note:'Cable, unilateral',sets:'3×15',rpe:'7',tempo:'2-0-2-1'},
-    {name:'EZ Bar Curl',note:'',sets:'3×8–10',rpe:'8',tempo:'2-0-X-1'},
-    {name:'Skull Crusher',note:'EZ bar',sets:'3×8–10',rpe:'8',tempo:'3-1-X-0'}
-  ]},
-  {day:'Day 5 — Friday',name:'ARMS + CORE',focus:'Biceps · Triceps · Abs',exercises:[
-    {name:'Cable Curl',note:'Bilateral',sets:'4×12–15',rpe:'8',tempo:'2-1-2-1'},
-    {name:'Concentration Curl',note:'',sets:'3×12–15',rpe:'8',tempo:'2-1-X-1'},
-    {name:'Cable Pushdown',note:'Rope',sets:'4×15',rpe:'8',tempo:'2-1-X-0'},
-    {name:'DB Overhead Extension',note:'',sets:'3×12',rpe:'7',tempo:'3-1-X-0'},
-    {name:'Cable Crunch',note:'',sets:'4×15–20',rpe:'8',tempo:'2-1-2-1'},
-    {name:'Hanging Knee Raise',note:'',sets:'3×15–20',rpe:'7',tempo:'controlled'},
-    {name:'Ab Wheel Rollout',note:'',sets:'3×10',rpe:'8',tempo:'3-0-X-0'},
-    {name:'Side Plank',note:'Each side',sets:'3×45s',rpe:'7',tempo:'—'}
-  ]}
+    {name:'PUSH', exercises:[{name:'Incline DB Press',sets:4,muscle:'Chest'}, {name:'Shoulder Press',sets:3,muscle:'Shoulders'}]},
+    {name:'PULL', exercises:[{name:'Lat Pulldown',sets:4,muscle:'Back'}, {name:'DB Curl',sets:3,muscle:'Arms'}]}
 ];
 
-// ═══════════════════════════════════════════
-// STATE
-// ═══════════════════════════════════════════
-function freshState() {
-  return {
-    week:1,dow:0,
-    sessions:[null,null,null,null,null],
-    setLogs:{},
-    nutrition:{cal:0,protein:0,carbs:0,fat:0},
-    weights:[],
-    sleepLog:[],
-    meals:[false,false,false,false,false],
-    supps:[false,false,false,false,false],
-    history:[],
-    cyclingDays:[],
-    lastAI:'',
-    lastModified: new Date().toISOString()
-  };
-}
-
 let S = (() => {
-  try { const d=localStorage.getItem('apex_v4'); return d?JSON.parse(d):freshState(); } catch(e){ return freshState(); }
+    const d = localStorage.getItem('apex_v5');
+    return d ? JSON.parse(d) : {
+        onboarded: false,
+        profile: {weight:0, height:0, age:0, goal:'hypertrophy'},
+        nutrition: {cal:0, protein:0},
+        sessions: [null, null],
+        setLogs: {},
+        weights: [],
+        lastModified: new Date().toISOString()
+    };
 })();
 
-// ═══════════════════════════════════════════
-// GOOGLE AUTH & SHEETS
-// ═══════════════════════════════════════════
-let gToken = null;        
-let gUser = null;         
-let gSheetId = null;      
-let syncQueue = [];       
-let isOnline = navigator.onLine;
-
-window.addEventListener('online',  () => { isOnline=true; updateSyncBar(); processSyncQueue(); });
-window.addEventListener('offline', () => { isOnline=false; updateSyncBar(); });
-
-function getClientId() { return localStorage.getItem('apex_google_client_id')||''; }
-function getSheetId()  { return localStorage.getItem('apex_sheet_id')||''; }
-function getToken()    { return localStorage.getItem('apex_gtoken')||''; }
-function getTokenExp() { return parseInt(localStorage.getItem('apex_gtoken_exp')||'0'); }
-
-function saveClientId() {
-  const v = document.getElementById('clientIdInput').value.trim();
-  if(!v){setClientIdStatus('Paste your Client ID first.','var(--red)');return;}
-  localStorage.setItem('apex_google_client_id', v);
-  setClientIdStatus('✓ Saved. Try signing in now.','var(--green)');
-  document.getElementById('clientIdMissing').classList.remove('show');
+function save() { 
+    S.lastModified = new Date().toISOString();
+    localStorage.setItem('apex_v5', JSON.stringify(S)); 
+    renderAll();
 }
 
-function setClientIdStatus(msg, color) {
-  const el=document.getElementById('clientIdStatus'); el.textContent=msg; el.style.color=color;
+// NAVIGATION
+function swTab(name, btn) {
+    document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
+    document.querySelectorAll('.tab').forEach(b=>b.classList.remove('on'));
+    document.getElementById('panel-'+name).classList.add('on');
+    if(btn) btn.classList.add('on');
 }
 
-function initGoogleAuth() {
-  // Hardcoded Client ID
-  const clientId = "846809219451-i3jbng379lbfgqad4t25tdesnij11lpq.apps.googleusercontent.com";
-  localStorage.setItem('apex_google_client_id', clientId);
-  document.getElementById('clientIdMissing').classList.remove('show');
+// ONBOARDING
+function checkOnboarding() {
+    if(!S.onboarded) {
+        document.getElementById('onboardScreen').classList.remove('hidden');
+    }
+}
 
-  const storedToken = getToken();
-  const tokenExp = getTokenExp();
-  if(storedToken && Date.now() < tokenExp - 60000) {
-    gToken = storedToken;
-    const storedUser = localStorage.getItem('apex_guser');
-    if(storedUser) { try { gUser = JSON.parse(storedUser); } catch(e){} }
-    const storedSheetId = getSheetId();
-    if(storedSheetId) gSheetId = storedSheetId;
-    onSignedIn();
-  }
+function finishOnboarding() {
+    S.profile.weight = parseFloat(document.getElementById('obWeight').value);
+    S.profile.height = parseFloat(document.getElementById('obHeight').value);
+    S.profile.age = parseInt(document.getElementById('obAge').value);
+    S.profile.goal = document.getElementById('obGoal').value;
+    S.onboarded = true;
+    document.getElementById('onboardScreen').classList.add('hidden');
+    save();
+}
+
+// CALORIE ENGINE (BMR Calculation)
+function getTargetCals() {
+    if(!S.onboarded) return 2000;
+    // Mifflin-St Jeor
+    const bmr = (10 * S.profile.weight) + (6.25 * S.profile.height) - (5 * S.profile.age) + 5;
+    return Math.round(bmr * 1.5); // Baseline active multiplier
+}
+
+// UI RENDERING
+function renderAll() {
+    const targets = getTargetCals();
+    const protTarget = Math.round(S.profile.weight * 2.2);
+    
+    // Dash
+    document.getElementById('dashCalRem').textContent = Math.max(0, targets - S.nutrition.cal);
+    document.getElementById('dashCalLog').textContent = `${S.nutrition.cal} / ${targets} kcal`;
+    document.getElementById('dashProt').textContent = `${S.nutrition.protein} / ${protTarget}g`;
+    document.getElementById('dashWt').textContent = S.profile.weight + 'kg';
+    
+    // Ring color logic
+    const pct = S.nutrition.cal / targets;
+    const ring = document.getElementById('calRing');
+    ring.setAttribute('stroke-dashoffset', 201 - (Math.min(pct, 1) * 201));
+    ring.setAttribute('stroke', pct > 1.1 ? 'var(--red)' : pct > 0.9 ? 'var(--green)' : 'var(--accent)');
+
+    renderTraining();
+    renderHeatmap();
+}
+
+function renderTraining() {
+    const list = document.getElementById('sessionList');
+    list.innerHTML = '';
+    SESSIONS_DEF.forEach((sess, si) => {
+        let exHtml = '';
+        sess.exercises.forEach((ex, ei) => {
+            const key = `${si}_${ei}`;
+            const logs = S.setLogs[key] || Array(ex.sets).fill({kg:'', reps:'', done:false});
+            const rows = logs.map((l, li) => `
+                <div class="set-row">
+                    <span style="font-size:10px;width:20px">S${li+1}</span>
+                    <input class="set-input glass" type="number" placeholder="kg" value="${l.kg}" oninput="updSet(${si},${ei},${li},'kg',this.value)">
+                    <input class="set-input glass" type="number" placeholder="reps" value="${l.reps}" oninput="updSet(${si},${ei},${li},'reps',this.value)">
+                    <button class="set-chk ${l.done?'logged':''}" onclick="togSet(${si},${ei},${li})">${l.done?'✓':'○'}</button>
+                </div>
+            `).join('');
+            exHtml += `<div class="card glass" style="margin-bottom:10px"><strong>${ex.name}</strong><div style="margin-top:8px">${rows}</div></div>`;
+        });
+        list.innerHTML += `<div class="card glass" style="border-left:4px solid var(--accent)"><h3>${sess.name}</h3>${exHtml}</div>`;
+    });
+}
+
+function renderHeatmap() {
+    const map = document.getElementById('muscleHeatmap');
+    const muscles = ['Chest','Back','Shoulders','Arms','Legs'];
+    map.innerHTML = muscles.map(m => `<div class="hm-item glass">${m}</div>`).join('');
+}
+
+// LOGGING LOGIC
+function updSet(si,ei,li,f,v) {
+    const key = `${si}_${ei}`;
+    if(!S.setLogs[key]) S.setLogs[key] = Array(SESSIONS_DEF[si].exercises[ei].sets).fill({kg:'', reps:'', done:false});
+    S.setLogs[key][li] = {...S.setLogs[key][li], [f]: v};
+    localStorage.setItem('apex_v5', JSON.stringify(S));
+}
+
+function togSet(si,ei,li) {
+    const key = `${si}_${ei}`;
+    S.setLogs[key][li].done = !S.setLogs[key][li].done;
+    if(S.setLogs[key][li].done) {
+        if(navigator.vibrate) navigator.vibrate(20);
+        startRestTimer(90); // 90s standard rest
+    }
+    save();
+}
+
+function logNutrition() {
+    S.nutrition.cal += parseFloat(document.getElementById('nCal').value) || 0;
+    S.nutrition.protein += parseFloat(document.getElementById('nProt').value) || 0;
+    document.getElementById('nCal').value = '';
+    document.getElementById('nProt').value = '';
+    save();
+}
+
+// REST TIMER ENGINE
+let timerInt;
+function startRestTimer(sec) {
+    clearInterval(timerInt);
+    const overlay = document.getElementById('restTimerOverlay');
+    overlay.style.display = 'flex';
+    let rem = sec;
+    timerInt = setInterval(() => {
+        rem--;
+        const m = Math.floor(rem/60), s = rem%60;
+        overlay.textContent = `${m}:${s<10?'0':''}${s}`;
+        if(rem <= 0) {
+            stopRestTimer();
+            if(navigator.vibrate) navigator.vibrate([100,50,100]);
+        }
+    }, 1000);
+}
+function stopRestTimer() { 
+    clearInterval(timerInt); 
+    document.getElementById('restTimerOverlay').style.display = 'none'; 
+}
+
+// GOOGLE AUTH BRIDGE
+function handleSignIn() {
+    const clientId = "846809219451-i3jbng379lbfgqad4t25tdesnij11lpq.apps.googleusercontent.com";
+    const tokenClient = google.accounts.oauth2.initTokenClient({
+        client_id: clientId,
+        scope: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file profile email',
+        callback: (resp) => {
+            if(resp.access_token) {
+                document.getElementById('authScreen').classList.add('hidden');
+                document.getElementById('syncStatus').textContent = '● Online Sync Active';
+                checkOnboarding();
+                save();
+            }
+        }
+    });
+    tokenClient.requestAccessToken();
 }
 
 function skipAuth() {
-  document.getElementById('authScreen').classList.add('hidden');
-  setSyncStatus('', 'Offline mode — local only');
+    document.getElementById('authScreen').classList.add('hidden');
+    checkOnboarding();
+    renderAll();
 }
 
-function handleSignIn() {
-  const clientId = getClientId();
-  if(!clientId) { alert('Go to settings to enter Client ID'); return; }
-  
-  const tokenClient = google.accounts.oauth2.initTokenClient({
-    client_id: clientId,
-    scope: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file profile email',
-    callback: handleTokenResponse
-  });
-  tokenClient.requestAccessToken({prompt:'consent'});
-}
-
-async function handleTokenResponse(resp) {
-  if(resp.error) { console.error('Auth error:', resp.error); return; }
-  gToken = resp.access_token;
-  const exp = Date.now() + (resp.expires_in - 60) * 1000;
-  localStorage.setItem('apex_gtoken', gToken);
-  localStorage.setItem('apex_gtoken_exp', exp.toString());
-
-  try {
-    const r = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-      headers: { Authorization: 'Bearer ' + gToken }
-    });
-    const u = await r.json();
-    gUser = { name: u.name, email: u.email, picture: u.picture };
-    localStorage.setItem('apex_guser', JSON.stringify(gUser));
-  } catch(e) { console.warn('User info fetch failed', e); }
-
-  onSignedIn();
-}
-
-async function onSignedIn() {
-  updateAuthUI();
-  document.getElementById('authScreen').classList.add('hidden');
-  await findOrCreateSheet();
-  await pullAndMerge();
-  updateSyncBar();
-}
-
-async function findOrCreateSheet() {
-  if(gSheetId) return;
-  try {
-    const r = await gFetch(`https://www.googleapis.com/drive/v3/files?q=name='${SHEET_NAME}' and mimeType='application/vnd.google-apps.spreadsheet' and trashed=false`);
-    if(r.files && r.files.length > 0) {
-      gSheetId = r.files[0].id;
-      localStorage.setItem('apex_sheet_id', gSheetId);
-    } else {
-      const create = await gFetch('https://sheets.googleapis.com/v4/spreadsheets', {
-        method: 'POST',
-        body: JSON.stringify({ properties: { title: SHEET_NAME } })
-      });
-      gSheetId = create.spreadsheetId;
-      localStorage.setItem('apex_sheet_id', gSheetId);
-    }
-  } catch(e) { console.error('Sheet management failed', e); }
-}
-
-async function gFetch(url, options={}) {
-  const r = await fetch(url, {
-    ...options,
-    headers: {
-      'Authorization': 'Bearer ' + gToken,
-      'Content-Type': 'application/json',
-      ...(options.headers||{})
-    }
-  });
-  if(!r.ok) throw new Error(`HTTP ${r.status}`);
-  return r.json();
-}
-
-async function pullAndMerge() {
-  // Pulling logic omitted for brevity, basic local save
-  save();
-  renderAll();
-}
-
-// ═══════════════════════════════════════════
-// CORE LOGIC
-// ═══════════════════════════════════════════
-function save() {
-  S.lastModified = new Date().toISOString();
-  localStorage.setItem('apex_v4', JSON.stringify(S));
-  // schedulePush logic would go here
-}
-
-function swTab(name, btn) {
-  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
-  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('on'));
-  document.getElementById('panel-'+name).classList.add('on');
-  if(btn) btn.classList.add('on');
-}
-
-function buildSessions() {
-  const list=document.getElementById('sessionList'); list.innerHTML='';
-  SESSIONS_DEF.forEach((sess,si)=>{
-    const status=S.sessions[si];
-    let exHtml='';
-    sess.exercises.forEach((ex,ei)=>{
-      const key=si+'_'+ei;
-      if(!S.setLogs[key]) S.setLogs[key]=mkSets(ex.sets);
-      const sets=S.setLogs[key], dc=sets.filter(s=>s.done).length;
-      const setRows=sets.map((st,sti)=>`
-        <div class="set-row">
-          <span class="set-num">S${sti+1}</span>
-          <input class="set-input${st.done?' done-in':''}" type="number" value="${st.kg}" oninput="updSet(${si},${ei},${sti},'kg',this.value)">
-          <span class="set-sep">×</span>
-          <input class="set-input${st.done?' done-in':''}" type="number" value="${st.reps}" oninput="updSet(${si},${ei},${sti},'reps',this.value)">
-          <button class="set-chk${st.done?' logged':''}" onclick="togSetDone(${si},${ei},${sti})">${st.done?'✓':'○'}</button>
-        </div>`).join('');
-      exHtml+=`<div class="ex-block">
-        <div class="ex-hdr"><div class="ex-title">${ex.name}</div><div class="ex-meta"><span class="chip">${ex.sets}</span></div></div>
-        <div class="set-logger">${setRows}</div>
-        <div class="sets-count">${dc}/${sets.length} sets logged</div>
-      </div>`;
-    });
-    const wrap=document.createElement('div'); wrap.className='sc-wrap';
-    wrap.innerHTML=`<div class="sc-hdr" onclick="togSess(${si})"><div><div class="sc-name">${sess.name}</div></div><div class="sc-meta"><div class="${status==='done'?'sdot done':status==='missed'?'sdot missed':'sdot'}"></div></div></div>
-    <div class="sc-body" id="sbody-${si}">${exHtml}<div class="sess-actions"><button class="btn btn-primary" onclick="markSess(${si},'done')">Done</button></div></div>`;
-    list.appendChild(wrap);
-  });
-}
-
-function mkSets(str){const n=parseInt(str)||3;return Array(n).fill(null).map(()=>({kg:'',reps:'',done:false}));}
-function togSess(si){const b=document.getElementById('sbody-'+si); b.classList.toggle('open');}
-function markSess(si,st){S.sessions[si]=st;save();renderAll();}
-function updSet(si,ei,sti,f,v){S.setLogs[si+'_'+ei][sti][f]=v;save();}
-function togSetDone(si,ei,sti){const s=S.setLogs[si+'_'+ei][sti]; s.done=!s.done;save();renderAll();}
-
-function logWeight(){
-  const v=parseFloat(document.getElementById('wtIn').value);
-  if(!v) return;
-  S.weights.unshift({date:new Date().toLocaleDateString('en-GB'),val:v});
-  save(); renderAll();
-}
-
-function logNutrition(){
-  S.nutrition.cal+=parseFloat(document.getElementById('nCal').value)||0;
-  S.nutrition.protein+=parseFloat(document.getElementById('nProt').value)||0;
-  save(); renderAll();
-}
-
-function logSleep(){
-  const h=parseFloat(document.getElementById('sleepBed').value)||0; 
-  S.sleepLog.unshift({hrs:h, date:new Date().toLocaleDateString('en-GB')});
-  save(); renderAll();
-}
-
-// UI HELPERS
-function updateAuthUI() {
-  const signedIn = !!(gToken && gUser);
-  document.getElementById('googleSignedInActions').style.display = signedIn ? 'flex' : 'none';
-  document.getElementById('googleSignedOutActions').style.display = signedIn ? 'none' : 'block';
-  if(signedIn && gUser) {
-    document.getElementById('googleUserName').textContent = gUser.name;
-    document.getElementById('googleUserEmail').textContent = gUser.email;
-  }
-}
-
-function updateSyncBar(){/* placeholder */}
-function updateNutritionUI(){
-  const n=S.nutrition;
-  document.getElementById('calLog').textContent=Math.round(n.cal);
-  document.getElementById('dashProt').textContent=Math.round(n.protein)+'g';
-}
-function updateWeightUI(){
-  if(S.weights[0]) document.getElementById('wtVal').textContent=S.weights[0].val+'kg';
-}
-function updateWeekBadge(){ document.getElementById('wkBadge').textContent='WEEK '+S.week; }
-function updateWeekGrid(){/* placeholder */}
-function updateRecovery(){/* placeholder */}
-function updateSessCount(){/* placeholder */}
-function updateSleepUI(){
-  if(S.sleepLog[0]) document.getElementById('dashSleep').textContent=S.sleepLog[0].hrs+'h';
-}
-
-function renderAll(){
-  buildSessions();
-  updateNutritionUI();
-  updateWeightUI();
-  updateWeekBadge();
-  updateSleepUI();
-  updateAuthUI();
-}
-
-function openExport(){
-  document.getElementById('expCode').textContent=JSON.stringify(S,null,2);
-  document.getElementById('modalExport').classList.add('show');
-}
-function closeModal(id){ document.getElementById(id).classList.remove('show'); }
-
-window.addEventListener('load', () => {
-  initGoogleAuth();
-  renderAll();
-});
+window.onload = () => { renderAll(); checkOnboarding(); };
 </script>
 </body>
 </html>
