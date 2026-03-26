@@ -564,8 +564,8 @@ textarea{resize:vertical;min-height:80px;font-size:11px;line-height:1.5}
     <div class="lbl">Meal Checklist — Auto-logs nutrition when ticked</div>
     <div id="mealChecklistBody"></div>
     <div class="meal-total-row" id="mealTotalRow">
-      <span class="mut">Full plan total</span>
-      <span class="acc">2,140 kcal · 214g P · 165g C · 52g F</span>
+      <span class="mut">Standard day plan</span>
+      <span class="acc">2,400 kcal</span>
     </div>
   </div>
   <div class="card">
@@ -906,14 +906,49 @@ const SLEEP_TARGET = 7.75;
 const SHEET_NAME   = 'APEX_Protocol_Data';
 const FOLDER_NAME  = 'Gym Workout Data';
 
-// Meal plan macros — used for auto-logging when meal toggle is ticked
-const MEAL_DATA = [
-  {name:'Breakfast',         desc:'3 eggs + 150g Greek yogurt + fruit',           cal:420, protein:38, carbs:32, fat:14},
-  {name:'Lunch',             desc:'Chicken/turkey 200g + rice + olive oil veg',   cal:620, protein:58, carbs:55, fat:12},
-  {name:'Pre-Workout',       desc:'Rice cakes + cottage cheese or banana + whey', cal:310, protein:32, carbs:38, fat:4},
-  {name:'Post-Workout Dinner',desc:'Lean beef/chicken 200g + roasted veg',        cal:580, protein:58, carbs:28, fat:18},
-  {name:'Evening Protein',   desc:'Casein shake or cottage cheese before 10pm',   cal:210, protein:28, carbs:12, fat:4}
-];
+// ── Meal plans — three tiers matching the three calorie targets ───────────────
+// Every meal's cal = protein*4 + carbs*4 + fat*9 (no rounding gaps)
+// Standard: 2402 kcal / 210P / 233C / 70F
+// Run day:  2702 kcal / 210P / 308C / 70F
+// Long run: 2898 kcal / 210P / 375C / 62F
+
+const MEAL_PLANS = {
+  standard: [
+    {name:'Breakfast',          desc:'3 eggs + 150g Greek yogurt + fruit + honey',          cal:458,  protein:38, carbs:45,  fat:14},
+    {name:'Lunch',              desc:'Chicken/turkey 200g + 200g rice (cooked) + olive oil', cal:601,  protein:56, carbs:65,  fat:13},
+    {name:'Pre-Workout',        desc:'2 rice cakes + 100g cottage cheese + banana + whey',  cal:341,  protein:32, carbs:42,  fat:5},
+    {name:'Post-Workout Dinner',desc:'Lean beef/chicken 200g + roasted veg + 1 tbsp oil',   cal:598,  protein:55, carbs:45,  fat:22},
+    {name:'Evening Protein',    desc:'Casein shake or 150g cottage cheese before 10pm',     cal:216,  protein:27, carbs:18,  fat:4},
+    {name:'Daily Extras',       desc:'Cooking oils, condiments, fruit snacks, drinks',      cal:188,  protein:2,  carbs:18,  fat:12}
+  ],
+  run: [
+    {name:'Breakfast',          desc:'3 eggs + 150g Greek yogurt + fruit + 40g oats',       cal:538,  protein:38, carbs:65,  fat:14},
+    {name:'Pre-Run Snack',      desc:'Banana + 30g oats + 200ml orange juice (30min before)',cal:273,  protein:4,  carbs:62,  fat:1},
+    {name:'Post-Run Lunch',     desc:'Chicken 200g + 250g rice (cooked) + olive oil + veg', cal:686,  protein:58, carbs:82,  fat:14},
+    {name:'Pre-Workout',        desc:'2 rice cakes + 100g cottage cheese + whey shake',     cal:333,  protein:32, carbs:40,  fat:5},
+    {name:'Post-Workout Dinner',desc:'Lean beef/chicken 200g + roasted veg + 1 tbsp oil',   cal:558,  protein:55, carbs:35,  fat:22},
+    {name:'Evening Protein',    desc:'Casein shake + 100g cottage cheese + fruit',          cal:314,  protein:23, carbs:24,  fat:14}
+  ],
+  long: [
+    {name:'Pre-Run Breakfast',  desc:'3 eggs + 200g Greek yogurt + 50g oats + banana + honey', cal:680, protein:42, carbs:92, fat:16},
+    {name:'Mid/Post-Run Fuel',  desc:'Energy gel or banana during + 300ml sports drink after',  cal:216, protein:2,  carbs:52, fat:0},
+    {name:'Recovery Lunch',     desc:'Chicken/beef 250g + 300g rice (cooked) + olive oil + veg',cal:824, protein:72, carbs:98, fat:16},
+    {name:'Afternoon Snack',    desc:'2 rice cakes + peanut butter + banana',                   cal:321, protein:8,  carbs:52, fat:9},
+    {name:'Dinner',             desc:'Salmon/beef 200g + sweet potato 200g + roasted veg',      cal:653, protein:60, carbs:65, fat:17},
+    {name:'Evening Protein',    desc:'Casein shake or 150g cottage cheese before 10pm',         cal:204, protein:26, carbs:16, fat:4}
+  ]
+};
+
+// Returns the right meal plan array based on today's actual day
+function getMealsForToday() {
+  var dow = realDow();
+  if (dow === 2) return MEAL_PLANS.run;    // Wednesday — run + gym
+  if (dow === 5) return MEAL_PLANS.long;   // Saturday — long run
+  return MEAL_PLANS.standard;
+}
+
+// Keep MEAL_DATA as a legacy alias so any old references still work
+var MEAL_DATA = MEAL_PLANS.standard;
 
 const MUSCLE_GROUPS = [
   {key:'chest',label:'Chest',icon:'🫁'},
@@ -1651,9 +1686,19 @@ function lockBtn(btnEl, ms) {
 // ══════════════════════════════════════
 function buildMealChecklist() {
   var body = document.getElementById('mealChecklistBody');
+  var totalRow = document.getElementById('mealTotalRow');
   if (!body) return;
-  body.innerHTML = MEAL_DATA.map(function(m, i){
-    var checked = S.meals[i];
+
+  var meals = getMealsForToday();
+  var tgt   = todayCalTarget();
+  var dow   = realDow();
+  var planLabel = dow===2 ? '🏃 Run day plan (Wed)' : dow===5 ? '🏃 Long run plan (Sat)' : 'Standard day plan';
+
+  // Ensure S.meals has enough slots for today's plan (may differ from standard 5→6)
+  while (S.meals.length < meals.length) S.meals.push(false);
+
+  body.innerHTML = meals.map(function(m, i){
+    var checked = !!S.meals[i];
     return '<div class="tog-item">'
       +'<div class="tog-info">'
       +'<div class="tog-name">'+m.name+'</div>'
@@ -1668,22 +1713,40 @@ function buildMealChecklist() {
       +'<div class="tog'+(checked?' on':'')+'" id="meal-'+i+'" onclick="togMeal('+i+')"></div>'
       +'</div>';
   }).join('');
+
+  // Update total row
+  if (totalRow) {
+    var totCal  = meals.reduce(function(a,m){ return a+m.cal; }, 0);
+    var totProt = meals.reduce(function(a,m){ return a+m.protein; }, 0);
+    var totCarb = meals.reduce(function(a,m){ return a+m.carbs; }, 0);
+    var totFat  = meals.reduce(function(a,m){ return a+m.fat; }, 0);
+    var diff    = totCal - tgt.cal;
+    var diffStr = diff === 0
+      ? '<span class="green" style="font-size:9px;font-family:var(--fm)">✓ Hits daily target</span>'
+      : '<span style="font-size:9px;font-family:var(--fm);color:var(--muted)">'+(diff>0?'+':'')+diff+' vs target</span>';
+    totalRow.innerHTML =
+      '<span class="mut">'+planLabel+'</span>'
+      +'<span>'
+      +'<span class="acc">'+totCal+' kcal</span>'
+      +' · '+totProt+'g P · '+totCarb+'g C · '+totFat+'g F &nbsp;'+diffStr
+      +'</span>';
+  }
 }
 
 function togMeal(i) {
   var wasOn = S.meals[i];
   S.meals[i] = !wasOn;
-  var m = MEAL_DATA[i];
+  var meals = getMealsForToday();
+  var m = meals[i];
+  if (!m) return; // safety — index out of range
   var n = todayNutr();
   if (!wasOn) {
-    // Ticking ON — add macros
     n.cal     += m.cal;
     n.protein += m.protein;
     n.carbs   += m.carbs;
     n.fat     += m.fat;
     showToast('🍽️', m.name+' logged', '+'+m.cal+' kcal · +'+m.protein+'g protein', 'success');
   } else {
-    // Unticking — subtract macros (floor at 0)
     n.cal     = Math.max(0, n.cal     - m.cal);
     n.protein = Math.max(0, n.protein - m.protein);
     n.carbs   = Math.max(0, n.carbs   - m.carbs);
