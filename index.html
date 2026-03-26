@@ -444,6 +444,12 @@ textarea{resize:vertical;min-height:80px;font-size:11px;line-height:1.5}
   <div class="alert al-purple" id="alertSleepDebt"><strong>😴 SLEEP DEBT</strong>Weekly debt above 5hrs. Recovery and fat loss both impaired.</div>
   <div class="alert al-blue" id="alertApiKey"><strong>🔑 API KEY MISSING</strong>Add Anthropic key in Settings for AI weekly analysis.</div>
 
+  <div class="card t-purple" id="weeklySummaryCard" style="display:none">
+    <div class="lbl">Last Week — <span id="sumWkLabel" style="color:var(--accent)"></span></div>
+    <div class="sg" id="sumGrid" style="margin-bottom:9px"></div>
+    <div id="sumBars"></div>
+  </div>
+
   <div class="card t-green">
     <div class="lbl">Today's Calories</div>
     <div class="ring-wrap">
@@ -454,7 +460,7 @@ textarea{resize:vertical;min-height:80px;font-size:11px;line-height:1.5}
           transform="rotate(-90 40 40)" style="transition:stroke-dashoffset .8s cubic-bezier(.34,1.56,.64,1),stroke .5s"/>
       </svg>
       <div>
-        <div class="ring-lbl">Remaining</div>
+        <div class="ring-lbl" id="calRemLabel">Remaining</div>
         <div class="ring-num"><span id="calRem">2400</span></div>
         <div class="ring-sub mut"><span id="calLogged">0</span> / <span id="calTarget">2400</span> kcal <span id="calDayType" style="color:var(--green);font-size:9px"></span></div>
       </div>
@@ -1116,6 +1122,18 @@ if (!S.weekStartMonday) {
 }
 // Always recalculate week number from the fixed reference — fixes stale stored values
 S.week = weekNumFromMonday(S.weekStartMonday);
+
+// ── Daily reset for meal and supplement toggles ────────────────────────────
+// Meals and supps should reset each calendar day, not carry over
+(function(){
+  var today = todayISO();
+  if (S.lastMealResetDate !== today) {
+    S.meals = [false,false,false,false,false,false]; // 6 slots for extended plans
+    S.supps = [false,false,false,false,false];
+    S.lastMealResetDate = today;
+    // Don't save here — will be saved on first interaction or at boot renderAll
+  }
+})();
 
 // ── Auto-detect week rollover on every load ────────────────────────────────
 function checkWeekRollover() {
@@ -2017,14 +2035,32 @@ function logRun(ri, done) {
 function buildSessions() {
   var list = document.getElementById('sessionList');
   list.innerHTML = '';
+  var todayDow = realDow();  // Mon=0 … Fri=4 for gym days
+  var todaySi  = TRAIN_DAYS.indexOf(todayDow); // -1 if weekend
+
+  // Pull last week's setLogs for reference weights
+  var lastWeekLogs = {};
+  var lastH = (S.history||[]).slice(-1)[0];
+  if (lastH && lastH.setLogs) lastWeekLogs = lastH.setLogs;
+
   SESSIONS_DEF.forEach(function(sess, si){
     var status = S.sessions[si];
+    var isToday = si === todaySi;
     var exHtml = '';
     sess.exercises.forEach(function(ex, ei){
       var k = si+'_'+ei;
       if (!S.setLogs[k]) S.setLogs[k] = mkSets(ex.sets);
       var sets = S.setLogs[k];
       var dc = sets.filter(function(s){ return s.done; }).length;
+
+      // Last week's top weight for this exercise
+      var lwSets = lastWeekLogs[k] || [];
+      var lwTop = 0;
+      lwSets.forEach(function(s){ if (s.done && parseFloat(s.kg)>lwTop) lwTop=parseFloat(s.kg)||0; });
+      var lwHint = lwTop > 0
+        ? '<span style="font-family:var(--fm);font-size:9px;color:var(--muted)"> · last week: <span style="color:var(--blue)">'+lwTop+'kg</span></span>'
+        : '';
+
       var setRows = sets.map(function(st, sti){
         return '<div class="set-row" id="sr-'+si+'-'+ei+'-'+sti+'">'
           +'<span class="set-num">S'+(sti+1)+'</span>'
@@ -2034,9 +2070,10 @@ function buildSessions() {
           +'<button class="set-chk'+(st.done?' logged':'')+'" onclick="togSet('+si+','+ei+','+sti+')">'+(st.done?'✓':'○')+'</button>'
           +'</div>';
       }).join('');
+
       exHtml += '<div class="ex-block">'
         +'<div class="ex-hdr">'
-        +'<div><div class="ex-title">'+ex.name+'</div>'+(ex.note?'<div class="ex-subtitle">'+ex.note+'</div>':'')+'</div>'
+        +'<div><div class="ex-title">'+ex.name+lwHint+'</div>'+(ex.note?'<div class="ex-subtitle">'+ex.note+'</div>':'')+'</div>'
         +'<div class="ex-meta"><span class="chip chip-sets">'+ex.sets+'</span><span class="chip chip-rpe">RPE '+ex.rpe+'</span><span class="chip chip-tempo">'+ex.tempo+'</span></div>'
         +'</div>'
         +'<div class="set-logger" id="lg-'+si+'-'+ei+'">'+setRows+'</div>'
@@ -2044,19 +2081,37 @@ function buildSessions() {
         +'<div class="sets-count" id="sc-'+si+'-'+ei+'">'+dc+'/'+sets.length+' sets logged</div>'
         +'</div>';
     });
+
+    // Today badge on header
+    var todayBadge = isToday && status===null
+      ? '<span style="font-family:var(--fm);font-size:8px;background:var(--accent);color:#07070f;padding:2px 7px;border-radius:4px;font-weight:700;margin-left:6px">TODAY</span>'
+      : '';
+
     var wrap = document.createElement('div');
     wrap.className = 'sc-wrap';
+    // Highlight today's card with accent border
+    if (isToday && status===null) wrap.style.borderColor = 'rgba(200,255,62,.4)';
+
     wrap.innerHTML = '<div class="sc-hdr" onclick="togSess('+si+')">'
-      +'<div><div class="sc-day">'+sess.day+'</div><div class="sc-name">'+sess.name+'</div><div class="sc-focus">'+sess.focus+'</div></div>'
+      +'<div><div class="sc-day">'+sess.day+todayBadge+'</div><div class="sc-name">'+sess.name+'</div><div class="sc-focus">'+sess.focus+'</div></div>'
       +'<div class="sc-meta"><div class="'+(status==='done'?'sdot done':status==='missed'?'sdot missed':'sdot')+'" id="sdot-'+si+'"></div><div class="chev" id="chev-'+si+'">▾</div></div>'
       +'</div>'
       +'<div class="sc-body" id="sbody-'+si+'">'
+      +(sess.runNote ? '<div class="tip tip-green" style="margin:0 0 12px">🏃 '+sess.runNote+'</div>' : '')
       +exHtml
       +'<div class="sess-actions">'
       +'<button class="btn btn-primary" style="flex:1" onclick="markSess('+si+',\'done\')">✓ Done</button>'
       +'<button class="btn btn-secondary" style="flex:1" onclick="markSess('+si+',\'missed\')">✗ Missed</button>'
       +'</div></div>';
     list.appendChild(wrap);
+
+    // Auto-open today's session (only if not yet done/missed)
+    if (isToday && status === null) {
+      var body = document.getElementById('sbody-'+si);
+      var chev = document.getElementById('chev-'+si);
+      if (body) { body.classList.add('open'); }
+      if (chev) { chev.classList.add('open'); chev.textContent='▴'; }
+    }
   });
 }
 
@@ -2244,19 +2299,31 @@ function logNutrition() {
 function updateNutritionUI() {
   var n   = todayNutr();
   var tgt = todayCalTarget();
-  var rem = Math.max(0, tgt.cal - n.cal);
-  document.getElementById('calRem').textContent    = rem;
+  var over = n.cal - tgt.cal;
+  var isOver = over > 0;
+  var rem = isOver ? 0 : tgt.cal - n.cal;
+
+  // Calorie ring label — show remaining or over-target
+  var remEl = document.getElementById('calRem');
+  var remLbl = document.getElementById('calRemLabel');
+  if (remEl) remEl.textContent = isOver ? '+'+Math.round(over) : Math.round(rem);
+  if (remEl) remEl.style.color = isOver ? 'var(--red)' : 'var(--text)';
+  if (remLbl) remLbl.textContent = isOver ? 'over target' : 'Remaining';
+
   document.getElementById('calLogged').textContent = Math.round(n.cal);
-  document.getElementById('dashProt').innerHTML    = Math.round(n.protein)+'<span>g</span>';
+  document.getElementById('dashProt').innerHTML = Math.round(n.protein)+'<span>g</span>';
+
   var tgtEl = document.getElementById('calTarget');
   var dayTypeEl = document.getElementById('calDayType');
   if (tgtEl) tgtEl.textContent = tgt.cal;
   if (dayTypeEl) dayTypeEl.textContent = tgt===TARGETS_RUN?' (run day)':tgt===TARGETS_LONG?' (long run)':'';
+
   var pct = Math.min(n.cal/tgt.cal, 1);
   var ring = document.getElementById('calRing');
   ring.setAttribute('stroke-dashoffset', 201 - pct*201);
-  ring.setAttribute('stroke', pct>1?'var(--red)':pct>0.85?'var(--orange)':'var(--accent)');
-  setBar('pbCal','lbCal',n.cal,tgt.cal,'kcal','var(--accent)');
+  ring.setAttribute('stroke', isOver?'var(--red)':pct>0.85?'var(--orange)':'var(--accent)');
+
+  setBar('pbCal','lbCal',n.cal,tgt.cal,'kcal', isOver?'var(--red)':'var(--accent)');
   setBar('pbProt','lbProt',n.protein,tgt.protein,'g','var(--protein)');
   setBar('pbCarb','lbCarb',n.carbs,tgt.carbs,'g','var(--carbs)');
   setBar('pbFat','lbFat',n.fat,tgt.fat,'g','var(--fat)');
@@ -2426,6 +2493,69 @@ function updateSleepUI() {
 // ══════════════════════════════════════
 // WEEK / DAY
 // ══════════════════════════════════════
+function updateWeeklySummary() {
+  var card = document.getElementById('weeklySummaryCard');
+  if (!card) return;
+  var lastH = (S.history||[]).slice(-1)[0];
+  if (!lastH) { card.style.display='none'; return; }
+  card.style.display='block';
+
+  document.getElementById('sumWkLabel').textContent = 'Week '+lastH.week+' · '+( lastH.weekStartMonday||'');
+
+  // Sessions completed
+  var sessArr = lastH.sessions || [];
+  var done   = sessArr.filter(function(s){ return s==='done'; }).length;
+  var missed = sessArr.filter(function(s){ return s==='missed'; }).length;
+  var sessColor = done>=4?'green':done>=3?'acc':'red';
+
+  // Avg daily calories
+  var nutrDates = Object.keys(lastH.nutritionByDate||{});
+  var avgCal = 0, avgProt = 0;
+  if (nutrDates.length) {
+    nutrDates.forEach(function(d){ avgCal+=lastH.nutritionByDate[d].cal||0; avgProt+=lastH.nutritionByDate[d].protein||0; });
+    avgCal  = Math.round(avgCal  / nutrDates.length);
+    avgProt = Math.round(avgProt / nutrDates.length);
+  }
+
+  // Avg sleep
+  var slArr = lastH.sleepLog||[];
+  var avgSleep = 0;
+  if (slArr.length) { slArr.forEach(function(s){ avgSleep+=s.hrs||0; }); avgSleep=(avgSleep/slArr.length).toFixed(1); }
+
+  // Weight delta
+  var wArr = lastH.weights||[];
+  var wDelta = '';
+  if (wArr.length >= 2) { wDelta = (wArr[0].val - wArr[wArr.length-1].val).toFixed(1); }
+  else if (wArr.length === 1 && S.weights.length) { wDelta = (wArr[0].val - S.weights[S.weights.length-1].val).toFixed(1); }
+
+  // Runs done
+  var runLogs = lastH.runLogs || {};
+  var runsDone = Object.keys(runLogs).filter(function(k){ return runLogs[k]&&runLogs[k].done; }).length;
+
+  document.getElementById('sumGrid').innerHTML =
+    sc('Sessions', done+'/'+Math.max(done+missed,5), sessColor, done>=4?'Great week':'Keep pushing') +
+    sc('Runs', runsDone+'/2', runsDone>=2?'green':runsDone===1?'acc':'red', runsDone>=2?'Both done':'Missed some') +
+    sc('Avg Calories', avgCal?avgCal+'kcal':'—', 'acc', avgCal?'Daily avg':'Not logged') +
+    sc('Avg Sleep', avgSleep?avgSleep+'hrs':'—', parseFloat(avgSleep)>=7?'green':parseFloat(avgSleep)>=6?'acc':'red', slArr.length?slArr.length+' nights logged':'Not logged');
+
+  // Calorie adherence bar
+  var calAdh = avgCal ? Math.min(Math.round((avgCal/TARGETS.cal)*100),130) : 0;
+  var protAdh = avgProt ? Math.min(Math.round((avgProt/TARGETS.protein)*100),130) : 0;
+  document.getElementById('sumBars').innerHTML =
+    (avgCal ? bar('Avg Cal adherence', calAdh, calAdh>=90&&calAdh<=110?'var(--green)':calAdh<80?'var(--red)':'var(--accent)') : '') +
+    (avgProt ? bar('Protein adherence', protAdh, protAdh>=95?'var(--green)':protAdh<80?'var(--red)':'var(--orange)') : '') +
+    (wDelta !== '' ? '<div class="fb sm" style="margin-top:6px"><span class="mut">Weight change last week</span><span class="'+(parseFloat(wDelta)<0?'green':'red')+'">'+( parseFloat(wDelta)<=0?'':'+' )+wDelta+'kg</span></div>' : '');
+}
+
+function sc(lbl, val, color, sub) {
+  return '<div class="sc"><div class="sc-lbl">'+lbl+'</div><div class="sc-val '+color+'" style="font-size:20px">'+val+'</div><div class="sc-sub mut">'+sub+'</div></div>';
+}
+
+function bar(lbl, pct, color) {
+  return '<div class="pb-wrap"><div class="pb-lbl"><span>'+lbl+'</span><span>'+pct+'%</span></div>'
+    +'<div class="pb-track"><div class="pb-fill" style="width:'+Math.min(pct,100)+'%;background:'+color+'"></div></div></div>';
+}
+
 function updateWeekBadge() {
   var dow = realDow();
   var days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
@@ -2637,6 +2767,7 @@ function renderAll() {
   updateWeekBadge();
   updateSleepUI();
   updateHeatMap();
+  updateWeeklySummary();
   restoreToggles();
   updateApiAlert();
   updateGoogleUI();
