@@ -1053,11 +1053,16 @@ function thisWeekMonday() {
   return mon.getFullYear()+'-'+pad2(mon.getMonth()+1)+'-'+pad2(mon.getDate());
 }
 
-// Returns week number since a reference Monday (first Monday ever used)
+// Returns week number counting from the user's program start (first time they opened the app)
+// programStartMonday is stored in state on first use — persists forever
+// Week 1 = first Monday of 2026 (5 Jan 2026)
+// This gives a human-meaningful programme week number
+var PROGRAMME_START = '2026-01-05';
+
 function weekNumFromMonday(mondayISO) {
-  var ref = new Date('2025-01-06'); // fixed reference Monday
+  var ref = new Date(PROGRAMME_START);
   var mon = new Date(mondayISO);
-  var diffMs = mon - ref;
+  var diffMs  = mon - ref;
   var diffWeeks = Math.floor(diffMs / (7 * 24 * 3600 * 1000));
   return Math.max(1, diffWeeks + 1);
 }
@@ -1099,7 +1104,6 @@ var S = (function(){
 if (!S.runLogs) S.runLogs = {};
 if (!S.nutritionByDate) {
   S.nutritionByDate = {};
-  // Migrate legacy nutrition field into today's date
   if (S.nutrition && (S.nutrition.cal || S.nutrition.protein)) {
     S.nutritionByDate[todayISO()] = {
       cal:S.nutrition.cal||0, protein:S.nutrition.protein||0,
@@ -1109,8 +1113,9 @@ if (!S.nutritionByDate) {
 }
 if (!S.weekStartMonday) {
   S.weekStartMonday = thisWeekMonday();
-  S.week = weekNumFromMonday(S.weekStartMonday);
 }
+// Always recalculate week number from the fixed reference — fixes stale stored values
+S.week = weekNumFromMonday(S.weekStartMonday);
 
 // ── Auto-detect week rollover on every load ────────────────────────────────
 function checkWeekRollover() {
@@ -1528,7 +1533,7 @@ function gFetch(url, opts) {
 function pullAndMerge() {
   if (!gSheetId || !gToken) return Promise.resolve();
   setSyncStatus('syncing','Pulling from Sheets...');
-  return gFetch('https://sheets.googleapis.com/v4/spreadsheets/'+gSheetId+'/values/State!A1:B1')
+  return gFetch('https://sheets.googleapis.com/v4/spreadsheets/'+gSheetId+'/values/State!A2:B2')
     .then(function(r){
       if (r.values && r.values[0] && r.values[0][1]) {
         try {
@@ -1568,20 +1573,49 @@ function schedulePush() {
 var REQUIRED_TABS = ['State','WeightLog','SleepLog','NutritionLog','RunLog','History'];
 
 // Check which tabs exist and add any missing ones
+// Header rows for each tab — written once when tabs are created or verified
+var TAB_HEADERS = {
+  'State':        [['Last Modified', 'Full State JSON']],
+  'WeightLog':    [['Date', 'Weight (kg)', 'Logged At']],
+  'SleepLog':     [['Date', 'Bedtime', 'Wake Time', 'Hours', 'Quality']],
+  'NutritionLog': [['Date', 'Calories', 'Protein (g)', 'Carbs (g)', 'Fat (g)']],
+  'RunLog':       [['Day of Week', 'Run Type', 'Completed', 'Distance (km)', 'Time (min)', 'Week Start']],
+  'History':      [['Week Number', 'Week Start Monday', 'Full Week JSON']]
+};
+
 function ensureSheetTabs() {
   if (!gSheetId || !gToken) return Promise.resolve();
   return gFetch('https://sheets.googleapis.com/v4/spreadsheets/'+gSheetId+'?fields=sheets.properties.title')
     .then(function(r){
       var existing = (r.sheets||[]).map(function(s){ return s.properties.title; });
       var missing  = REQUIRED_TABS.filter(function(t){ return existing.indexOf(t) === -1; });
-      if (!missing.length) { errLog('info','All sheet tabs present',''); return; }
-      errLog('info','Adding missing tabs',missing.join(', '));
-      var requests = missing.map(function(title){
-        return { addSheet:{ properties:{ title:title } } };
+
+      var p = Promise.resolve();
+
+      // Create any missing tabs
+      if (missing.length) {
+        errLog('info','Adding missing tabs',missing.join(', '));
+        var requests = missing.map(function(title){
+          return { addSheet:{ properties:{ title:title } } };
+        });
+        p = p.then(function(){
+          return gFetch('https://sheets.googleapis.com/v4/spreadsheets/'+gSheetId+':batchUpdate',{
+            method:'POST', body:JSON.stringify({ requests:requests })
+          });
+        }).then(function(){ errLog('info','Missing tabs created',missing.join(', ')); });
+      }
+
+      // Write headers to all tabs (A1 row) — safe to repeat as it just overwrites row 1
+      p = p.then(function(){
+        var headerData = REQUIRED_TABS.map(function(tab){
+          return { range: tab+'!A1:Z1', values: TAB_HEADERS[tab] || [['Data']] };
+        });
+        return gFetch('https://sheets.googleapis.com/v4/spreadsheets/'+gSheetId+'/values:batchUpdate',{
+          method:'POST', body:JSON.stringify({ valueInputOption:'RAW', data:headerData })
+        }).then(function(){ errLog('info','Sheet headers written',''); });
       });
-      return gFetch('https://sheets.googleapis.com/v4/spreadsheets/'+gSheetId+':batchUpdate',{
-        method:'POST', body:JSON.stringify({ requests:requests })
-      }).then(function(){ errLog('info','Missing tabs created',missing.join(', ')); });
+
+      return p;
     })
     .catch(function(e){ errLog('warn','ensureSheetTabs failed',e.message); });
 }
@@ -1601,7 +1635,8 @@ function buildPushData() {
     return [date, n.cal||0, n.protein||0, n.carbs||0, n.fat||0];
   });
 
-  var data = [{range:'State!A1:B1', values:stateRow}];
+  // Data rows start at row 2 (row 1 is headers)
+  var data = [{range:'State!A2:B2', values:stateRow}]; // State data in row 2; headers in row 1 via ensureSheetTabs
   if (wRows.length)    data.push({range:'WeightLog!A2:C'+(1+wRows.length),       values:wRows});
   if (slRows.length)   data.push({range:'SleepLog!A2:E'+(1+slRows.length),       values:slRows});
   if (hRows.length)    data.push({range:'History!A2:C'+(1+hRows.length),         values:hRows});
