@@ -350,6 +350,18 @@ textarea{resize:vertical;min-height:80px;font-size:11px;line-height:1.5}
 ::-webkit-scrollbar{width:3px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+/* ERROR LOG */
+.errlog-entry{padding:10px 12px;border-bottom:1px solid var(--border);font-family:var(--fm);font-size:10px;line-height:1.5}
+.errlog-entry:last-child{border-bottom:none}
+.errlog-time{font-size:9px;color:var(--muted);margin-bottom:3px}
+.errlog-type{display:inline-block;font-size:8px;font-weight:700;letter-spacing:1px;padding:1px 5px;border-radius:3px;margin-bottom:4px}
+.errlog-type.t-error{background:rgba(255,68,85,.15);color:var(--red)}
+.errlog-type.t-warn{background:rgba(255,107,62,.12);color:var(--orange)}
+.errlog-type.t-promise{background:rgba(167,139,250,.12);color:var(--purple)}
+.errlog-type.t-info{background:rgba(62,212,255,.1);color:var(--blue)}
+.errlog-msg{color:var(--text);word-break:break-word}
+.errlog-stack{color:var(--muted);font-size:9px;margin-top:3px;white-space:pre-wrap;word-break:break-word;max-height:60px;overflow:hidden}
+.errlog-empty{font-family:var(--fm);font-size:11px;color:var(--green);padding:12px 0;text-align:center}
 </style>
 </head>
 <body>
@@ -660,7 +672,7 @@ textarea{resize:vertical;min-height:80px;font-size:11px;line-height:1.5}
     <div class="lbl">Protocol Summary</div>
     <div class="tog-item"><div class="tog-info"><div class="tog-name">Split</div><div class="tog-sub">Push / Pull / Legs / Upper / Arms+Core — 5 days Mon–Fri</div></div></div>
     <div class="tog-item"><div class="tog-info"><div class="tog-name">Training</div><div class="tog-sub">Evening sessions ~7pm</div></div></div>
-    <div class="tog-item"><div class="tog-info"><div class="tog-name">Calories</div><div class="tog-sub">2,400 kcal deficit · +150 cycling days · 3,000 refeed Day 7</div></div></div>
+    <div class="tog-item"><div class="tog-info"><div class="tog-name">Calories</div><div class="tog-sub">2,400 kcal standard · 2,700 Wed run+gym · 2,900 Sat long run · +150 cycling days</div></div></div>
     <div class="tog-item"><div class="tog-info"><div class="tog-name">Sleep target</div><div class="tog-sub">11pm–6:45am (7h45m) weekdays · Max 1am weekends</div></div></div>
     <div class="tog-item"><div class="tog-info"><div class="tog-name">Caffeine</div><div class="tog-sub">Hard cutoff 1:00pm. No 3pm coffee.</div></div></div>
     <div class="tog-item"><div class="tog-info"><div class="tog-name">Injuries</div><div class="tog-sub">Bilateral rotator cuff · Right ankle (2023)</div></div></div>
@@ -672,6 +684,21 @@ textarea{resize:vertical;min-height:80px;font-size:11px;line-height:1.5}
       <button class="btn-outline" onclick="openExport()">📤 Export JSON</button>
       <button class="btn-outline" onclick="openImport()">📥 Import JSON</button>
       <button class="btn-danger" onclick="confirmFullReset()">⚠ Factory Reset All Data</button>
+    </div>
+  </div>
+
+  <div class="card t-red">
+    <div class="lbl" style="display:flex;justify-content:space-between;align-items:center">
+      <span>Error Log</span>
+      <span id="errCount" class="sm" style="color:var(--red)"></span>
+    </div>
+    <p class="sm mut" style="margin-bottom:10px;line-height:1.6">All JavaScript errors, warnings and sync failures are captured here. Copy and share with the developer when something isn't working.</p>
+    <div style="display:flex;gap:7px;margin-bottom:10px">
+      <button class="btn-outline" style="flex:1;padding:9px" onclick="copyErrorLog()">📋 Copy Full Log</button>
+      <button class="btn-danger" style="flex:1;padding:9px" onclick="clearErrorLog()">Clear Log</button>
+    </div>
+    <div id="errLogList" style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;max-height:300px;overflow-y:auto">
+      <div class="errlog-empty">✓ No errors logged</div>
     </div>
   </div>
 </div>
@@ -730,8 +757,114 @@ textarea{resize:vertical;min-height:80px;font-size:11px;line-height:1.5}
 'use strict';
 
 // ══════════════════════════════════════
-// CONSTANTS
+// ERROR LOGGER — captures everything
 // ══════════════════════════════════════
+var ERRLOG_KEY = 'apex_errlog';
+var MAX_ERRORS = 100;
+
+function errLog(type, message, detail) {
+  try {
+    var logs = [];
+    try { logs = JSON.parse(localStorage.getItem(ERRLOG_KEY) || '[]'); } catch(e) {}
+    var entry = {
+      t: new Date().toISOString(),
+      type: type,
+      msg: String(message).slice(0, 500),
+      detail: detail ? String(detail).slice(0, 800) : ''
+    };
+    logs.unshift(entry);
+    if (logs.length > MAX_ERRORS) logs = logs.slice(0, MAX_ERRORS);
+    localStorage.setItem(ERRLOG_KEY, JSON.stringify(logs));
+    renderErrLog();
+  } catch(e) { /* silent — don't recurse */ }
+}
+
+// Intercept all unhandled JS errors
+window.onerror = function(msg, src, line, col, err) {
+  errLog('error', msg, (src?src.split('/').pop():'')+(line?':'+line:'')+(err&&err.stack?'\n'+err.stack.slice(0,400):''));
+  return false;
+};
+
+// Intercept unhandled promise rejections
+window.addEventListener('unhandledrejection', function(e) {
+  var msg = e.reason ? (e.reason.message || String(e.reason)) : 'Unhandled promise rejection';
+  var stack = e.reason && e.reason.stack ? e.reason.stack.slice(0, 400) : '';
+  errLog('promise', msg, stack);
+});
+
+// Override console.warn to also capture warnings
+var _origWarn = console.warn;
+console.warn = function() {
+  var args = Array.prototype.slice.call(arguments);
+  errLog('warn', args[0], args.slice(1).map(function(a){ return typeof a==='object'?JSON.stringify(a).slice(0,200):String(a); }).join(' '));
+  _origWarn.apply(console, args);
+};
+
+// Override console.error to capture errors
+var _origError = console.error;
+console.error = function() {
+  var args = Array.prototype.slice.call(arguments);
+  errLog('error', args[0], args.slice(1).map(function(a){ return typeof a==='object'?JSON.stringify(a).slice(0,200):String(a); }).join(' '));
+  _origError.apply(console, args);
+};
+
+function renderErrLog() {
+  var el = document.getElementById('errLogList');
+  var countEl = document.getElementById('errCount');
+  if (!el) return;
+  var logs = [];
+  try { logs = JSON.parse(localStorage.getItem(ERRLOG_KEY) || '[]'); } catch(e) {}
+  if (countEl) countEl.textContent = logs.length > 0 ? logs.length+' entries' : '';
+  if (!logs.length) {
+    el.innerHTML = '<div class="errlog-empty">✓ No errors logged</div>';
+    return;
+  }
+  el.innerHTML = logs.map(function(e) {
+    var typeClass = e.type==='error'?'t-error':e.type==='warn'?'t-warn':e.type==='promise'?'t-promise':'t-info';
+    return '<div class="errlog-entry">'
+      +'<div class="errlog-time">'+e.t+'</div>'
+      +'<span class="errlog-type '+typeClass+'">'+e.type.toUpperCase()+'</span>'
+      +'<div class="errlog-msg">'+escHtml(e.msg)+'</div>'
+      +(e.detail?'<div class="errlog-stack">'+escHtml(e.detail)+'</div>':'')
+      +'</div>';
+  }).join('');
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function copyErrorLog() {
+  var logs = [];
+  try { logs = JSON.parse(localStorage.getItem(ERRLOG_KEY) || '[]'); } catch(e) {}
+  if (!logs.length) { alert('No errors logged yet.'); return; }
+  var text = '=== APEX ERROR LOG ===\nCopied: '+new Date().toISOString()+'\nURL: '+window.location.href+'\n\n'
+    + logs.map(function(e,i){
+        return '['+(i+1)+'] '+e.t+'\nTYPE: '+e.type+'\nMSG: '+e.msg+(e.detail?'\nDETAIL: '+e.detail:'')+'\n';
+      }).join('\n---\n');
+  navigator.clipboard.writeText(text).then(function(){
+    alert('✓ Error log copied to clipboard. Paste it to share.');
+  }).catch(function(){
+    // Fallback for browsers that block clipboard
+    var ta = document.createElement('textarea');
+    ta.value = text; ta.style.position='fixed'; ta.style.opacity='0';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); alert('✓ Error log copied.'); }
+    catch(e) { alert('Copy failed. Open browser console for details.'); }
+    document.body.removeChild(ta);
+  });
+}
+
+function clearErrorLog() {
+  if (!confirm('Clear all error logs?')) return;
+  localStorage.removeItem(ERRLOG_KEY);
+  renderErrLog();
+}
+
+// Log app startup
+errLog('info', 'APEX v5 boot — '+new Date().toISOString(), 'URL: '+window.location.href);
+
+
 const TARGETS      = {cal:2400,protein:210,carbs:233,fat:70};
 const TARGETS_RUN  = {cal:2700,protein:210,carbs:310,fat:70};   // Wed lunchtime run day
 const TARGETS_LONG = {cal:2900,protein:210,carbs:370,fat:75};   // Sat long run / refeed
@@ -945,28 +1078,34 @@ function trySilentRefresh() {
 }
 
 function onTokenReceived(resp) {
-  if (resp.error) { showAuthErr('Auth error: ' + resp.error); return; }
+  if (resp.error) { errLog('error','Auth token error',resp.error); showAuthErr('Auth error: ' + resp.error); return; }
   gToken = resp.access_token;
   var exp = Date.now() + (resp.expires_in - 60) * 1000;
   localStorage.setItem('apex_gt', gToken);
   localStorage.setItem('apex_gte', String(exp));
+  errLog('info','Auth token received — fetching user profile','expires_in: '+resp.expires_in);
 
   fetch('https://www.googleapis.com/oauth2/v3/userinfo', {headers:{Authorization:'Bearer '+gToken}})
     .then(function(r){ return r.json(); })
     .then(function(u){
       gUser = {name:u.name, email:u.email, picture:u.picture};
       localStorage.setItem('apex_guser', JSON.stringify(gUser));
+      errLog('info','User profile fetched',u.email||'no email');
       onSignedIn();
     })
-    .catch(function(){ onSignedIn(); });
+    .catch(function(e){ errLog('warn','User profile fetch failed — continuing without profile',e.message||''); onSignedIn(); });
 }
 
 function onSignedIn() {
+  errLog('info','onSignedIn called','gUser: '+(gUser?gUser.email:'none')+' gSheetId: '+(gSheetId||'none'));
   updateGoogleUI();
   hideAuthScreen();
   var sid = getSheetIdLS();
-  if (sid) gSheetId = sid;
-  findOrCreateSheet().then(function(){ return pullAndMerge(); }).then(function(){ updateSyncBarState(); });
+  if (sid) { gSheetId = sid; errLog('info','Restored sheet ID from localStorage',sid); }
+  findOrCreateSheet()
+    .then(function(){ errLog('info','findOrCreateSheet complete','gSheetId: '+(gSheetId||'MISSING')); return pullAndMerge(); })
+    .then(function(){ updateSyncBarState(); })
+    .catch(function(e){ errLog('error','onSignedIn sheet/pull chain failed',e.message); });
 }
 
 function initGoogleFromStorage() {
@@ -998,8 +1137,8 @@ function updateGoogleUI() {
   var si = document.getElementById('gSignedIn');
   var so = document.getElementById('gSignedOut');
   var signedIn = !!(gToken && gUser);
-  if (si) si.style.display = signedIn ? 'block' : 'none';
-  if (so) so.style.display = signedIn ? 'none' : 'block';
+  if (si) { si.style.cssText = signedIn ? 'display:block' : 'display:none!important'; }
+  if (so) { so.style.cssText = signedIn ? 'display:none!important' : 'display:block'; }
   if (signedIn && gUser) {
     var nm = document.getElementById('gUserName');
     var em = document.getElementById('gUserEmail');
@@ -1009,6 +1148,7 @@ function updateGoogleUI() {
     if (em) em.textContent = gUser.email || '';
     if (av && gUser.picture) av.innerHTML = '<img src="'+gUser.picture+'" width="36" height="36" style="border-radius:50%">';
     if (su) su.textContent = gUser.email || '';
+    updateSheetLink();
   }
 }
 
@@ -1087,7 +1227,7 @@ function findOrCreateSheet() {
       })}).then(function(r){ gFolderId = r.id; localStorage.setItem('apex_fid', gFolderId); });
     })
     .then(function(){ return findOrCreateSheetInFolder(); })
-    .catch(function(e){ console.warn('Folder create failed, trying root:', e); return findOrCreateSheetInFolder(); });
+    .catch(function(e){ errLog('warn','Folder create failed — trying root',e.message); return findOrCreateSheetInFolder(); });
 }
 
 function findOrCreateSheetInFolder() {
@@ -1116,18 +1256,18 @@ function findOrCreateSheetInFolder() {
           }
         });
     })
-    .catch(function(e){ console.warn('Sheet find/create failed:',e); });
+    .catch(function(e){ errLog('error','Sheet find/create failed',e.message); });
 }
 
 function gFetch(url, opts) {
   opts = opts || {};
   var token = gToken || getStoredToken();
-  if (!token) return Promise.reject(new Error('No token'));
+  if (!token) { errLog('error','gFetch called with no token',url.slice(0,80)); return Promise.reject(new Error('No token')); }
   return fetch(url, Object.assign({}, opts, {
     headers: Object.assign({'Authorization':'Bearer '+token,'Content-Type':'application/json'}, opts.headers||{})
   })).then(function(r){
-    if (r.status === 401) { gToken=null; localStorage.removeItem('apex_gt'); updateGoogleUI(); setSyncStatus('error','Session expired'); }
-    if (!r.ok) return r.json().then(function(e){ throw new Error(e.error&&e.error.message||'HTTP '+r.status); });
+    if (r.status === 401) { errLog('warn','gFetch 401 — token expired',url.slice(0,80)); gToken=null; localStorage.removeItem('apex_gt'); updateGoogleUI(); setSyncStatus('error','Session expired'); }
+    if (!r.ok) return r.json().then(function(e){ var msg=e.error&&e.error.message||'HTTP '+r.status; errLog('error','gFetch HTTP error',url.slice(0,80)+' → '+msg); throw new Error(msg); });
     return r.json();
   });
 }
@@ -1149,7 +1289,7 @@ function pullAndMerge() {
       }
       setSyncStatus('synced','Synced · '+(gUser&&gUser.email||''));
       renderAll();
-    }).catch(function(e){ console.warn('Pull failed:',e); setSyncStatus('error','Sync error — data saved locally'); });
+    }).catch(function(e){ errLog('error','pullAndMerge failed',e.message); setSyncStatus('error','Sync error — data saved locally'); });
 }
 
 function mergeStates(primary, secondary) {
@@ -1187,7 +1327,7 @@ function pushToSheet() {
   gFetch('https://sheets.googleapis.com/v4/spreadsheets/'+gSheetId+'/values:batchUpdate',{
     method:'POST', body:JSON.stringify({valueInputOption:'RAW', data:data})
   }).then(function(){ setSyncStatus('synced','Synced · '+(gUser&&gUser.email||'')); syncQueue=[]; })
-    .catch(function(e){ console.warn('Push failed:',e); setSyncStatus('error','Sync error — will retry'); setTimeout(pushToSheet,10000); });
+    .catch(function(e){ errLog('error','pushToSheet failed',e.message); setSyncStatus('error','Sync error — will retry'); setTimeout(pushToSheet,10000); });
 }
 
 function processSyncQueue() { if (syncQueue.length && gToken && gSheetId) { syncQueue=[]; pushToSheet(); } }
@@ -1594,7 +1734,9 @@ function togCycleDay(i) {
 // RECOVERY
 // ══════════════════════════════════════
 function updateRecovery() {
+  // Only count explicitly marked 'missed' — null means not yet logged
   var missed = S.sessions.filter(function(s){ return s==='missed'; }).length;
+  var logged = S.sessions.filter(function(s){ return s!==null; }).length;
   var bar = document.getElementById('recBar');
   bar.innerHTML = '';
   for (var i=0; i<5; i++) {
@@ -1609,7 +1751,8 @@ function updateRecovery() {
   var lbl = document.getElementById('recLbl');
   lbl.textContent = 'Recovery: '+(msgs[missed]||'DELOAD REQUIRED');
   lbl.className = 'sm '+(missed===0?'green':missed<=2?'acc':'red');
-  document.getElementById('alertDeload').className = missed>=3?'alert al-red show':'alert al-red';
+  // Only show deload alert if at least 3 sessions were explicitly marked missed
+  document.getElementById('alertDeload').className = (missed>=3 && logged>=3)?'alert al-red show':'alert al-red';
 }
 
 function updateSessCount() {
@@ -1737,7 +1880,8 @@ function updateSleepUI() {
   var dl = document.getElementById('debtLbl');
   dl.textContent = debt.toFixed(1)+' hrs/week';
   dl.className = debt<2?'green':debt<5?'acc':'red';
-  document.getElementById('alertSleepDebt').className = debt>=5?'alert al-purple show':'alert al-purple';
+  // Only show sleep debt alert after at least 3 nights are logged
+  document.getElementById('alertSleepDebt').className = (debt>=5 && S.sleepLog.length>=3)?'alert al-purple show':'alert al-purple';
   var logEl = document.getElementById('sleepLog');
   logEl.innerHTML = S.sleepLog.slice(0,7).map(function(e){
     var c = e.hrs>=7?'var(--green)':e.hrs>=6?'var(--accent)':'var(--red)';
@@ -1753,7 +1897,9 @@ function updateWeekBadge() {
   document.getElementById('wkNum').textContent = S.week;
   document.getElementById('aiWkNum').textContent = S.week;
   document.getElementById('dayLbl').textContent = 'Day '+(S.dow+1)+' of 7';
-  document.getElementById('alertRefeed').className = S.dow===6?'alert al-yellow show':'alert al-yellow';
+  // Only show refeed alert if it's genuinely day 7 AND user has logged real data this week
+  var hasData = S.sessions.some(function(s){ return s!==null; }) || S.weights.length > 0;
+  document.getElementById('alertRefeed').className = (S.dow===6 && hasData)?'alert al-yellow show':'alert al-yellow';
 }
 
 function nextDay() {
@@ -1946,6 +2092,7 @@ function renderAll() {
   updateApiAlert();
   updateGoogleUI();
   updateSheetLink();
+  renderErrLog();
   var k = getApiKey();
   if (k) { document.getElementById('apiKeyIn').value=k; document.getElementById('apiStatus').textContent='✓ Key loaded'; document.getElementById('apiStatus').style.color='var(--green)'; }
   var cid = getClientId();
