@@ -362,6 +362,34 @@ textarea{resize:vertical;min-height:80px;font-size:11px;line-height:1.5}
 .errlog-msg{color:var(--text);word-break:break-word}
 .errlog-stack{color:var(--muted);font-size:9px;margin-top:3px;white-space:pre-wrap;word-break:break-word;max-height:60px;overflow:hidden}
 .errlog-empty{font-family:var(--fm);font-size:11px;color:var(--green);padding:12px 0;text-align:center}
+/* TOAST NOTIFICATIONS */
+.toast-wrap{position:fixed;bottom:100px;left:50%;transform:translateX(-50%);z-index:300;display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none;width:calc(100% - 40px);max-width:440px}
+.toast{background:var(--bg2);border:1px solid var(--border2);border-radius:12px;padding:12px 18px;font-family:var(--fm);font-size:12px;color:var(--text);display:flex;align-items:center;gap:10px;box-shadow:0 8px 32px rgba(0,0,0,.5);animation:toastIn .3s cubic-bezier(.34,1.56,.64,1);width:100%;pointer-events:auto}
+.toast.removing{animation:toastOut .25s ease forwards}
+@keyframes toastIn{from{opacity:0;transform:translateY(20px) scale(.95)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes toastOut{from{opacity:1;transform:translateY(0)}to{opacity:0;transform:translateY(10px)}}
+.toast-icon{font-size:18px;flex-shrink:0}
+.toast-body{flex:1}
+.toast-title{font-weight:600;font-size:12px;margin-bottom:1px}
+.toast-sub{font-size:10px;color:var(--muted)}
+.toast.t-success{border-color:rgba(62,255,170,.3)}
+.toast.t-error{border-color:rgba(255,68,85,.3)}
+.toast.t-info{border-color:rgba(62,212,255,.3)}
+.toast.t-warn{border-color:rgba(200,255,62,.3)}
+
+/* SUBMIT LOCK — button disabled state */
+.btn-submitting{opacity:.6!important;cursor:not-allowed!important;pointer-events:none!important;position:relative}
+.btn-submitting::after{content:'';position:absolute;width:14px;height:14px;border:2px solid currentColor;border-top-color:transparent;border-radius:50%;right:14px;top:50%;margin-top:-7px;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* MEAL MACRO CHIPS */
+.meal-macros{display:flex;gap:5px;margin-top:4px;flex-wrap:wrap}
+.meal-chip{font-family:var(--fm);font-size:8px;padding:1px 6px;border-radius:3px;border:1px solid}
+.meal-chip.kcal{color:var(--accent);border-color:rgba(200,255,62,.2);background:rgba(200,255,62,.06)}
+.meal-chip.prot{color:var(--protein);border-color:rgba(255,107,62,.2);background:rgba(255,107,62,.06)}
+.meal-chip.carb{color:var(--carbs);border-color:rgba(62,212,255,.18);background:rgba(62,212,255,.05)}
+.meal-chip.fat{color:var(--fat);border-color:rgba(200,255,62,.15);background:rgba(200,255,62,.04)}
+.meal-total-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0 0;margin-top:6px;border-top:1px solid var(--border);font-family:var(--fm);font-size:10px}
 </style>
 </head>
 <body>
@@ -428,7 +456,7 @@ textarea{resize:vertical;min-height:80px;font-size:11px;line-height:1.5}
       <div>
         <div class="ring-lbl">Remaining</div>
         <div class="ring-num"><span id="calRem">2400</span></div>
-        <div class="ring-sub mut"><span id="calLogged">0</span> / 2400 kcal</div>
+        <div class="ring-sub mut"><span id="calLogged">0</span> / <span id="calTarget">2400</span> kcal <span id="calDayType" style="color:var(--green);font-size:9px"></span></div>
       </div>
     </div>
   </div>
@@ -532,13 +560,13 @@ textarea{resize:vertical;min-height:80px;font-size:11px;line-height:1.5}
     <div class="pb-wrap"><div class="pb-lbl"><span>Carbs</span><span id="lbCarb">0/233g</span></div><div class="pb-track"><div class="pb-fill" id="pbCarb" style="width:0%;background:var(--carbs)"></div></div></div>
     <div class="pb-wrap"><div class="pb-lbl"><span>Fat</span><span id="lbFat">0/70g</span></div><div class="pb-track"><div class="pb-fill" id="pbFat" style="width:0%;background:var(--fat)"></div></div></div>
   </div>
-  <div class="card">
-    <div class="lbl">Meal Checklist</div>
-    <div class="tog-item"><div class="tog-info"><div class="tog-name">Breakfast</div><div class="tog-sub">3 eggs + 150g Greek yogurt + fruit — ~40g protein</div></div><div class="tog" id="meal-0" onclick="togMeal(0)"></div></div>
-    <div class="tog-item"><div class="tog-info"><div class="tog-name">Lunch</div><div class="tog-sub">Chicken/turkey 200g + rice + olive oil veg — ~60g protein</div></div><div class="tog" id="meal-1" onclick="togMeal(1)"></div></div>
-    <div class="tog-item"><div class="tog-info"><div class="tog-name">Pre-Workout (6:30pm)</div><div class="tog-sub">Rice cakes + cottage cheese or banana + whey — ~30g protein</div></div><div class="tog" id="meal-2" onclick="togMeal(2)"></div></div>
-    <div class="tog-item"><div class="tog-info"><div class="tog-name">Post-Workout Dinner</div><div class="tog-sub">Lean beef/chicken 200g + roasted veg within 60 min — ~60g protein</div></div><div class="tog" id="meal-3" onclick="togMeal(3)"></div></div>
-    <div class="tog-item"><div class="tog-info"><div class="tog-name">Evening Protein</div><div class="tog-sub">Casein shake or cottage cheese before 10pm — ~30g protein</div></div><div class="tog" id="meal-4" onclick="togMeal(4)"></div></div>
+  <div class="card" id="mealChecklistCard">
+    <div class="lbl">Meal Checklist — Auto-logs nutrition when ticked</div>
+    <div id="mealChecklistBody"></div>
+    <div class="meal-total-row" id="mealTotalRow">
+      <span class="mut">Full plan total</span>
+      <span class="acc">2,140 kcal · 214g P · 165g C · 52g F</span>
+    </div>
   </div>
   <div class="card">
     <div class="lbl">Daily Supplements</div>
@@ -702,6 +730,9 @@ textarea{resize:vertical;min-height:80px;font-size:11px;line-height:1.5}
     </div>
   </div>
 </div>
+
+<!-- TOAST CONTAINER -->
+<div class="toast-wrap" id="toastWrap"></div>
 
 <!-- REST TIMER -->
 <div class="rest-timer" id="restTimer">
@@ -874,6 +905,15 @@ const RUN_DAYS     = [2,5];          // Wed (short), Sat (long)
 const SLEEP_TARGET = 7.75;
 const SHEET_NAME   = 'APEX_Protocol_Data';
 const FOLDER_NAME  = 'Gym Workout Data';
+
+// Meal plan macros — used for auto-logging when meal toggle is ticked
+const MEAL_DATA = [
+  {name:'Breakfast',         desc:'3 eggs + 150g Greek yogurt + fruit',           cal:420, protein:38, carbs:32, fat:14},
+  {name:'Lunch',             desc:'Chicken/turkey 200g + rice + olive oil veg',   cal:620, protein:58, carbs:55, fat:12},
+  {name:'Pre-Workout',       desc:'Rice cakes + cottage cheese or banana + whey', cal:310, protein:32, carbs:38, fat:4},
+  {name:'Post-Workout Dinner',desc:'Lean beef/chicken 200g + roasted veg',        cal:580, protein:58, carbs:28, fat:18},
+  {name:'Evening Protein',   desc:'Casein shake or cottage cheese before 10pm',   cal:210, protein:28, carbs:12, fat:4}
+];
 
 const MUSCLE_GROUPS = [
   {key:'chest',label:'Chest',icon:'🫁'},
@@ -1209,7 +1249,11 @@ function onSignedIn() {
   var sid = getSheetIdLS();
   if (sid) { gSheetId = sid; errLog('info','Restored sheet ID from localStorage',sid); }
   findOrCreateSheet()
-    .then(function(){ errLog('info','findOrCreateSheet complete','gSheetId: '+(gSheetId||'MISSING')); return pullAndMerge(); })
+    .then(function(){
+      errLog('info','findOrCreateSheet complete','gSheetId: '+(gSheetId||'MISSING'));
+      return ensureSheetTabs();  // verify all tabs exist, add any missing
+    })
+    .then(function(){ return pullAndMerge(); })
     .then(function(){ updateSyncBarState(); })
     .catch(function(e){ errLog('error','onSignedIn sheet/pull chain failed',e.message); });
 }
@@ -1485,51 +1529,172 @@ function schedulePush() {
   pushDebounce = setTimeout(pushToSheet, 2000);
 }
 
-function pushToSheet() {
-  if (!gToken || !gSheetId) return;
-  if (!isOnline) { syncQueue.push(1); setSyncStatus('offline','Offline — queued'); return; }
-  setSyncStatus('syncing','Saving...');
+// The tabs this app needs in the spreadsheet
+var REQUIRED_TABS = ['State','WeightLog','SleepLog','NutritionLog','RunLog','History'];
 
-  // Full state blob in State tab
-  var stateRow  = [[S.lastModified, JSON.stringify(S)]];
-  // Individual log tabs for human-readable history
-  var wRows  = S.weights.map(function(w){ return [w.date, w.val, new Date().toISOString()]; });
-  var slRows = (S.sleepLog||[]).map(function(s){ return [s.date, s.bed, s.wake, s.hrs, s.quality]; });
-  var hRows  = (S.history||[]).map(function(h){ return [h.week||'', h.weekStartMonday||'', JSON.stringify(h)]; });
-  // Run log rows
-  var runRows = [];
+// Check which tabs exist and add any missing ones
+function ensureSheetTabs() {
+  if (!gSheetId || !gToken) return Promise.resolve();
+  return gFetch('https://sheets.googleapis.com/v4/spreadsheets/'+gSheetId+'?fields=sheets.properties.title')
+    .then(function(r){
+      var existing = (r.sheets||[]).map(function(s){ return s.properties.title; });
+      var missing  = REQUIRED_TABS.filter(function(t){ return existing.indexOf(t) === -1; });
+      if (!missing.length) { errLog('info','All sheet tabs present',''); return; }
+      errLog('info','Adding missing tabs',missing.join(', '));
+      var requests = missing.map(function(title){
+        return { addSheet:{ properties:{ title:title } } };
+      });
+      return gFetch('https://sheets.googleapis.com/v4/spreadsheets/'+gSheetId+':batchUpdate',{
+        method:'POST', body:JSON.stringify({ requests:requests })
+      }).then(function(){ errLog('info','Missing tabs created',missing.join(', ')); });
+    })
+    .catch(function(e){ errLog('warn','ensureSheetTabs failed',e.message); });
+}
+
+function buildPushData() {
+  var stateRow = [[S.lastModified, JSON.stringify(S)]];
+  var wRows    = S.weights.map(function(w){ return [w.date, w.val, new Date().toISOString()]; });
+  var slRows   = (S.sleepLog||[]).map(function(s){ return [s.date, s.bed, s.wake, s.hrs, s.quality]; });
+  var hRows    = (S.history||[]).map(function(h){ return [h.week||'', h.weekStartMonday||'', JSON.stringify(h)]; });
+  var runRows  = [];
   Object.keys(S.runLogs||{}).forEach(function(dow){
     var r = S.runLogs[dow];
     if (r) runRows.push([dow, r.type||'', r.done?'yes':'no', r.distance||'', r.time||'', S.weekStartMonday||'']);
   });
-  // Nutrition by date rows
   var nutrRows = Object.keys(S.nutritionByDate||{}).map(function(date){
     var n = S.nutritionByDate[date];
     return [date, n.cal||0, n.protein||0, n.carbs||0, n.fat||0];
   });
 
   var data = [{range:'State!A1:B1', values:stateRow}];
-  if (wRows.length)    data.push({range:'WeightLog!A2:C'+(1+wRows.length),    values:wRows});
-  if (slRows.length)   data.push({range:'SleepLog!A2:E'+(1+slRows.length),    values:slRows});
-  if (hRows.length)    data.push({range:'History!A2:C'+(1+hRows.length),      values:hRows});
-  if (runRows.length)  data.push({range:'RunLog!A2:F'+(1+runRows.length),      values:runRows});
+  if (wRows.length)    data.push({range:'WeightLog!A2:C'+(1+wRows.length),       values:wRows});
+  if (slRows.length)   data.push({range:'SleepLog!A2:E'+(1+slRows.length),       values:slRows});
+  if (hRows.length)    data.push({range:'History!A2:C'+(1+hRows.length),         values:hRows});
+  if (runRows.length)  data.push({range:'RunLog!A2:F'+(1+runRows.length),         values:runRows});
   if (nutrRows.length) data.push({range:'NutritionLog!A2:E'+(1+nutrRows.length), values:nutrRows});
+  return {data:data, counts:{w:wRows.length, sl:slRows.length, h:hRows.length, r:runRows.length, n:nutrRows.length}};
+}
+
+function pushToSheet(isRetry) {
+  if (!gToken || !gSheetId) return;
+  if (!isOnline) { syncQueue.push(1); setSyncStatus('offline','Offline — queued'); return; }
+  setSyncStatus('syncing','Saving...');
+
+  var payload = buildPushData();
 
   gFetch('https://sheets.googleapis.com/v4/spreadsheets/'+gSheetId+'/values:batchUpdate', {
-    method:'POST', body:JSON.stringify({valueInputOption:'RAW', data:data})
+    method:'POST', body:JSON.stringify({valueInputOption:'RAW', data:payload.data})
   }).then(function(){
     setSyncStatus('synced','Synced · '+(gUser&&gUser.email||''));
     syncQueue=[];
-    errLog('info','Sync OK','rows: w='+wRows.length+' sl='+slRows.length+' h='+hRows.length);
+    errLog('info','Sync OK','w='+payload.counts.w+' sl='+payload.counts.sl+' h='+payload.counts.h+' n='+payload.counts.n);
   }).catch(function(e){
-    errLog('error','pushToSheet failed',e.message);
-    setSyncStatus('error','Sync error — will retry');
-    setTimeout(pushToSheet,10000);
+    var msg = e.message || '';
+    // Detect missing tab error — auto-create tabs and retry once
+    if (!isRetry && (msg.indexOf('Unable to parse range') !== -1 || msg.indexOf('parse range') !== -1)) {
+      errLog('warn','Missing sheet tab detected — auto-creating and retrying',msg);
+      setSyncStatus('syncing','Creating missing sheet tabs...');
+      ensureSheetTabs().then(function(){
+        setTimeout(function(){ pushToSheet(true); }, 1500);
+      });
+    } else {
+      errLog('error','pushToSheet failed'+(isRetry?' (after tab fix)':''),msg);
+      setSyncStatus('error','Sync error — will retry');
+      setTimeout(function(){ pushToSheet(false); }, 30000); // longer retry — 30s not 10s
+    }
   });
 }
 
 function processSyncQueue() { if (syncQueue.length && gToken && gSheetId) { syncQueue=[]; pushToSheet(); } }
 function forceSyncNow() { pullAndMerge().then(function(){ return pushToSheet(); }); }
+
+// ══════════════════════════════════════
+// TOAST NOTIFICATIONS
+// ══════════════════════════════════════
+var toastQueue = [];
+function showToast(icon, title, sub, type, duration) {
+  type = type || 'success'; duration = duration || 2500;
+  var wrap = document.getElementById('toastWrap');
+  if (!wrap) return;
+  var t = document.createElement('div');
+  t.className = 'toast t-'+type;
+  t.innerHTML = '<div class="toast-icon">'+icon+'</div>'
+    +'<div class="toast-body"><div class="toast-title">'+title+'</div>'
+    +(sub?'<div class="toast-sub">'+sub+'</div>':'')+'</div>';
+  wrap.appendChild(t);
+  if (navigator.vibrate) navigator.vibrate(30);
+  setTimeout(function(){
+    t.classList.add('removing');
+    setTimeout(function(){ if(t.parentNode) t.parentNode.removeChild(t); }, 280);
+  }, duration);
+}
+
+// ══════════════════════════════════════
+// SUBMIT LOCK — prevents double-tap
+// ══════════════════════════════════════
+var lockTimers = {};
+function lockBtn(btnEl, ms) {
+  if (!btnEl) return;
+  ms = ms || 1800;
+  btnEl.classList.add('btn-submitting');
+  btnEl.disabled = true;
+  var id = Math.random();
+  lockTimers[id] = setTimeout(function(){
+    btnEl.classList.remove('btn-submitting');
+    btnEl.disabled = false;
+    delete lockTimers[id];
+  }, ms);
+}
+
+// ══════════════════════════════════════
+// MEAL CHECKLIST — with macros & auto-log
+// ══════════════════════════════════════
+function buildMealChecklist() {
+  var body = document.getElementById('mealChecklistBody');
+  if (!body) return;
+  body.innerHTML = MEAL_DATA.map(function(m, i){
+    var checked = S.meals[i];
+    return '<div class="tog-item">'
+      +'<div class="tog-info">'
+      +'<div class="tog-name">'+m.name+'</div>'
+      +'<div class="tog-sub">'+m.desc+'</div>'
+      +'<div class="meal-macros">'
+      +'<span class="meal-chip kcal">'+m.cal+' kcal</span>'
+      +'<span class="meal-chip prot">'+m.protein+'g P</span>'
+      +'<span class="meal-chip carb">'+m.carbs+'g C</span>'
+      +'<span class="meal-chip fat">'+m.fat+'g F</span>'
+      +'</div>'
+      +'</div>'
+      +'<div class="tog'+(checked?' on':'')+'" id="meal-'+i+'" onclick="togMeal('+i+')"></div>'
+      +'</div>';
+  }).join('');
+}
+
+function togMeal(i) {
+  var wasOn = S.meals[i];
+  S.meals[i] = !wasOn;
+  var m = MEAL_DATA[i];
+  var n = todayNutr();
+  if (!wasOn) {
+    // Ticking ON — add macros
+    n.cal     += m.cal;
+    n.protein += m.protein;
+    n.carbs   += m.carbs;
+    n.fat     += m.fat;
+    showToast('🍽️', m.name+' logged', '+'+m.cal+' kcal · +'+m.protein+'g protein', 'success');
+  } else {
+    // Unticking — subtract macros (floor at 0)
+    n.cal     = Math.max(0, n.cal     - m.cal);
+    n.protein = Math.max(0, n.protein - m.protein);
+    n.carbs   = Math.max(0, n.carbs   - m.carbs);
+    n.fat     = Math.max(0, n.fat     - m.fat);
+    showToast('↩️', m.name+' removed', '-'+m.cal+' kcal', 'warn');
+  }
+  save();
+  var el = document.getElementById('meal-'+i);
+  if (el) el.classList.toggle('on', S.meals[i]);
+  updateNutritionUI();
+}
 
 // ══════════════════════════════════════
 // TABS
@@ -1962,30 +2127,37 @@ function updateSessCount() {
 // NUTRITION
 // ══════════════════════════════════════
 function logNutrition() {
+  var btn = document.querySelector('[onclick="logNutrition()"]');
+  var cal  = parseFloat(document.getElementById('nCal').value)  || 0;
+  var prot = parseFloat(document.getElementById('nProt').value) || 0;
+  var carb = parseFloat(document.getElementById('nCarb').value) || 0;
+  var fat  = parseFloat(document.getElementById('nFat').value)  || 0;
+  if (!cal && !prot && !carb && !fat) {
+    showToast('⚠️','Nothing to log','Enter at least one value','warn'); return;
+  }
+  lockBtn(btn);
   var n = todayNutr();
-  n.cal     += parseFloat(document.getElementById('nCal').value)  || 0;
-  n.protein += parseFloat(document.getElementById('nProt').value) || 0;
-  n.carbs   += parseFloat(document.getElementById('nCarb').value) || 0;
-  n.fat     += parseFloat(document.getElementById('nFat').value)  || 0;
+  n.cal += cal; n.protein += prot; n.carbs += carb; n.fat += fat;
   save(); updateNutritionUI();
   ['nCal','nProt','nCarb','nFat'].forEach(function(id){ document.getElementById(id).value=''; });
+  showToast('🍴','Nutrition logged','+'+cal+' kcal · +'+prot+'g protein','success');
 }
 
 function updateNutritionUI() {
   var n   = todayNutr();
-  var tgt = todayCalTarget();   // auto-adjusts: 2400 standard, 2700 Wed, 2900 Sat
+  var tgt = todayCalTarget();
   var rem = Math.max(0, tgt.cal - n.cal);
   document.getElementById('calRem').textContent    = rem;
   document.getElementById('calLogged').textContent = Math.round(n.cal);
   document.getElementById('dashProt').innerHTML    = Math.round(n.protein)+'<span>g</span>';
-  var pct  = Math.min(n.cal/tgt.cal, 1);
-  var circ = 201;
+  var tgtEl = document.getElementById('calTarget');
+  var dayTypeEl = document.getElementById('calDayType');
+  if (tgtEl) tgtEl.textContent = tgt.cal;
+  if (dayTypeEl) dayTypeEl.textContent = tgt===TARGETS_RUN?' (run day)':tgt===TARGETS_LONG?' (long run)':'';
+  var pct = Math.min(n.cal/tgt.cal, 1);
   var ring = document.getElementById('calRing');
-  ring.setAttribute('stroke-dashoffset', circ - pct*circ);
+  ring.setAttribute('stroke-dashoffset', 201 - pct*201);
   ring.setAttribute('stroke', pct>1?'var(--red)':pct>0.85?'var(--orange)':'var(--accent)');
-  // Update calorie ring sub-label with today's actual target
-  var subEl = document.querySelector('#panel-dashboard .ring-sub');
-  if (subEl) subEl.textContent = Math.round(n.cal)+' / '+tgt.cal+' kcal'+(tgt===TARGETS_RUN?' (run day)':tgt===TARGETS_LONG?' (long run)':'');
   setBar('pbCal','lbCal',n.cal,tgt.cal,'kcal','var(--accent)');
   setBar('pbProt','lbProt',n.protein,tgt.protein,'g','var(--protein)');
   setBar('pbCarb','lbCarb',n.carbs,tgt.carbs,'g','var(--carbs)');
@@ -2002,10 +2174,10 @@ function setBar(fid, lid, val, tgt, unit, color) {
 // ══════════════════════════════════════
 // MEALS & SUPPS
 // ══════════════════════════════════════
-function togMeal(i) { S.meals[i]=!S.meals[i]; save(); document.getElementById('meal-'+i).classList.toggle('on',S.meals[i]); }
+// togMeal defined earlier in meal checklist section — handles macro auto-logging
 function togSupp(i) { S.supps[i]=!S.supps[i]; save(); document.getElementById('supp-'+i).classList.toggle('on',S.supps[i]); }
 function restoreToggles() {
-  S.meals.forEach(function(v,i){ var el=document.getElementById('meal-'+i); if(el) el.classList.toggle('on',v); });
+  // Meal checklist is rebuilt by buildMealChecklist — no manual toggle restore needed
   S.supps.forEach(function(v,i){ var el=document.getElementById('supp-'+i); if(el) el.classList.toggle('on',v); });
 }
 
@@ -2013,12 +2185,20 @@ function restoreToggles() {
 // WEIGHT
 // ══════════════════════════════════════
 function logWeight() {
+  var btn = document.querySelector('[onclick="logWeight()"]');
   var v = parseFloat(document.getElementById('wtIn').value);
-  if (!v || v<40 || v>250) return;
-  S.weights.unshift({date:new Date().toLocaleDateString('en-GB'), val:v});
+  if (!v || v<40 || v>250) { showToast('⚠️','Invalid weight','Enter a value between 40–250 kg','warn'); return; }
+  lockBtn(btn);
+  var todayDate = new Date().toLocaleDateString('en-GB');
+  var existIdx = -1;
+  for (var i=0; i<S.weights.length; i++) { if (S.weights[i].date===todayDate) { existIdx=i; break; } }
+  var isUpdate = existIdx !== -1;
+  if (isUpdate) S.weights.splice(existIdx, 1);
+  S.weights.unshift({date:todayDate, val:v});
   if (S.weights.length>60) S.weights = S.weights.slice(0,60);
   save(); updateWeightUI();
   document.getElementById('wtIn').value = '';
+  showToast('⚖️', isUpdate?'Weight updated':'Weight logged', v+'kg today', 'success');
 }
 
 function updateWeightUI() {
@@ -2043,53 +2223,106 @@ function updateWeightUI() {
 // SLEEP
 // ══════════════════════════════════════
 function logSleep() {
+  var btn = document.querySelector('[onclick="logSleep()"]');
   var bed = document.getElementById('sleepBed').value;
   var wake = document.getElementById('sleepWake').value;
-  if (!bed || !wake) return;
+  if (!bed || !wake) { showToast('⚠️','Missing times','Set both bedtime and wake time','warn'); return; }
+  lockBtn(btn, 2000);
   var bh=parseInt(bed.split(':')[0]), bm=parseInt(bed.split(':')[1]);
   var wh=parseInt(wake.split(':')[0]), wm=parseInt(wake.split(':')[1]);
   var bedM = bh*60+bm, wakeM = wh*60+wm;
   if (wakeM <= bedM) wakeM += 1440;
   var hrs = (wakeM - bedM) / 60;
   var q = hrs>=7.5?'EXCELLENT':hrs>=7?'GOOD':hrs>=6?'ADEQUATE':hrs>=5?'POOR':'CRITICAL';
+  var hrsRounded = Math.round(hrs*10)/10;
   if (!S.sleepLog) S.sleepLog = [];
-  S.sleepLog.unshift({date:new Date().toLocaleDateString('en-GB'), bed:bed, wake:wake, hrs:Math.round(hrs*10)/10, quality:q});
+  var todayDate = new Date().toLocaleDateString('en-GB');
+  var existIdx = -1;
+  for (var j=0; j<S.sleepLog.length; j++) { if (S.sleepLog[j].date===todayDate) { existIdx=j; break; } }
+  var isUpdate = existIdx !== -1;
+  if (isUpdate) S.sleepLog.splice(existIdx, 1);
+  S.sleepLog.unshift({date:todayDate, bed:bed, wake:wake, hrs:hrsRounded, quality:q});
   if (S.sleepLog.length>60) S.sleepLog = S.sleepLog.slice(0,60);
   save(); updateSleepUI();
+  var h=Math.floor(hrsRounded), m=Math.round((hrsRounded-h)*60);
+  showToast('😴', isUpdate?'Sleep updated':'Sleep logged',
+    h+'h'+(m>0?m+'m':'')+' · '+q,
+    q==='EXCELLENT'||q==='GOOD'?'success':q==='ADEQUATE'?'info':'warn', 3000);
 }
 
 function updateSleepUI() {
-  if (!S.sleepLog || !S.sleepLog.length) return;
-  var latest = S.sleepLog[0];
-  var pct = Math.min(latest.hrs / SLEEP_TARGET, 1);
-  var arc = document.getElementById('sleepArc');
-  arc.setAttribute('stroke-dashoffset', 502 - pct*502);
-  var ac = latest.hrs>=7?'var(--green)':latest.hrs>=6?'var(--accent)':'var(--red)';
-  arc.setAttribute('stroke', ac);
-  var h = Math.floor(latest.hrs), m = Math.round((latest.hrs-h)*60);
-  document.getElementById('sleepHrs').textContent = h+'h'+(m>0?m+'m':'');
-  document.getElementById('sleepSubLbl').textContent = 'LAST NIGHT';
-  var ql = document.getElementById('sleepQuality');
-  ql.textContent = latest.quality; ql.style.color = ac;
-  document.getElementById('dashSleep').innerHTML = latest.hrs+'<span>hrs</span>';
-  document.getElementById('dashSleepLbl').textContent = latest.quality;
-  document.getElementById('dashSleep').className = 'sc-val '+(latest.hrs>=7?'green':latest.hrs>=6?'acc':'red');
-  var recent = S.sleepLog.slice(0,7);
-  var avg = recent.reduce(function(a,e){ return a+e.hrs; },0) / recent.length;
-  var debt = Math.max(0, (SLEEP_TARGET - avg) * 7);
-  var dp = Math.min((debt/14)*100,100);
-  document.getElementById('debtFill').style.width = dp+'%';
-  document.getElementById('debtFill').style.background = debt<2?'var(--green)':debt<5?'var(--accent)':'var(--red)';
-  var dl = document.getElementById('debtLbl');
-  dl.textContent = debt.toFixed(1)+' hrs/week';
-  dl.className = debt<2?'green':debt<5?'acc':'red';
-  // Only show sleep debt alert after at least 3 nights are logged
-  document.getElementById('alertSleepDebt').className = (debt>=5 && S.sleepLog.length>=3)?'alert al-purple show':'alert al-purple';
-  var logEl = document.getElementById('sleepLog');
-  logEl.innerHTML = S.sleepLog.slice(0,7).map(function(e){
-    var c = e.hrs>=7?'var(--green)':e.hrs>=6?'var(--accent)':'var(--red)';
-    return '<div class="sleep-log-entry"><span style="font-size:10px;color:var(--muted)">'+e.date+'</span><span style="font-size:11px">'+e.bed+' → '+e.wake+'</span><span style="font-size:12px;font-weight:600;color:'+c+'">'+e.hrs+'h</span></div>';
-  }).join('');
+  // Always update debt/history from full log even if today not yet logged
+  var hasAnyLog = S.sleepLog && S.sleepLog.length > 0;
+
+  // Check if the most recent entry was logged today or a previous day
+  var todayStr = todayISO().split('-').reverse().map(function(p,i){ return i===2?p:('0'+p).slice(-2); }).join('/'); // DD/MM/YYYY
+  // Actually use consistent comparison — convert today to en-GB format matching how we store dates
+  var todayDate = new Date().toLocaleDateString('en-GB'); // e.g. "26/03/2026"
+  var latest = hasAnyLog ? S.sleepLog[0] : null;
+  var isToday = latest && latest.date === todayDate;
+
+  // Update the sleep arc and dashboard stat
+  if (isToday) {
+    // Show today's logged sleep
+    var pct = Math.min(latest.hrs / SLEEP_TARGET, 1);
+    var arc = document.getElementById('sleepArc');
+    arc.setAttribute('stroke-dashoffset', 502 - pct*502);
+    var ac = latest.hrs>=7?'var(--green)':latest.hrs>=6?'var(--accent)':'var(--red)';
+    arc.setAttribute('stroke', ac);
+    var h = Math.floor(latest.hrs), m = Math.round((latest.hrs-h)*60);
+    document.getElementById('sleepHrs').textContent = h+'h'+(m>0?m+'m':'');
+    document.getElementById('sleepSubLbl').textContent = 'LAST NIGHT';
+    var ql = document.getElementById('sleepQuality');
+    ql.textContent = latest.quality; ql.style.color = ac;
+    document.getElementById('dashSleep').innerHTML = latest.hrs+'<span>hrs</span>';
+    document.getElementById('dashSleepLbl').textContent = latest.quality;
+    document.getElementById('dashSleep').className = 'sc-val '+(latest.hrs>=7?'green':latest.hrs>=6?'acc':'red');
+  } else if (latest && !isToday) {
+    // Has previous entries but nothing logged today yet — show prompt state
+    var arc2 = document.getElementById('sleepArc');
+    arc2.setAttribute('stroke-dashoffset', 502);
+    arc2.setAttribute('stroke', '#a78bfa');
+    document.getElementById('sleepHrs').textContent = '—';
+    document.getElementById('sleepSubLbl').textContent = 'LOG TODAY';
+    var ql2 = document.getElementById('sleepQuality');
+    ql2.textContent = 'Not yet logged'; ql2.style.color = 'var(--muted)';
+    document.getElementById('dashSleep').innerHTML = '—<span>hrs</span>';
+    document.getElementById('dashSleepLbl').textContent = 'Log last night';
+    document.getElementById('dashSleep').className = 'sc-val mut';
+  } else {
+    // No logs at all — reset to default state
+    var arc3 = document.getElementById('sleepArc');
+    arc3.setAttribute('stroke-dashoffset', 502);
+    arc3.setAttribute('stroke', '#a78bfa');
+    document.getElementById('sleepHrs').textContent = '—';
+    document.getElementById('sleepSubLbl').textContent = 'HRS LOGGED';
+    var ql3 = document.getElementById('sleepQuality');
+    ql3.textContent = 'LOG SLEEP'; ql3.style.color = 'var(--muted)';
+  }
+
+  // Debt and history always computed from full log regardless of today
+  if (hasAnyLog) {
+    var recent = S.sleepLog.slice(0,7);
+    var avg = recent.reduce(function(a,e){ return a+e.hrs; },0) / recent.length;
+    var debt = Math.max(0, (SLEEP_TARGET - avg) * 7);
+    var dp = Math.min((debt/14)*100,100);
+    document.getElementById('debtFill').style.width = dp+'%';
+    document.getElementById('debtFill').style.background = debt<2?'var(--green)':debt<5?'var(--accent)':'var(--red)';
+    var dl = document.getElementById('debtLbl');
+    dl.textContent = debt.toFixed(1)+' hrs/week';
+    dl.className = debt<2?'green':debt<5?'acc':'red';
+    document.getElementById('alertSleepDebt').className = (debt>=5 && S.sleepLog.length>=3)?'alert al-purple show':'alert al-purple';
+    var logEl = document.getElementById('sleepLog');
+    logEl.innerHTML = S.sleepLog.slice(0,7).map(function(e){
+      var c = e.hrs>=7?'var(--green)':e.hrs>=6?'var(--accent)':'var(--red)';
+      var isT = e.date === todayDate ? ' (today)' : '';
+      return '<div class="sleep-log-entry">'
+        +'<span style="font-size:10px;color:var(--muted)">'+e.date+isT+'</span>'
+        +'<span style="font-size:11px">'+e.bed+' → '+e.wake+'</span>'
+        +'<span style="font-size:12px;font-weight:600;color:'+c+'">'+e.hrs+'h</span>'
+        +'</div>';
+    }).join('');
+  }
 }
 
 // ══════════════════════════════════════
@@ -2297,6 +2530,7 @@ document.querySelectorAll('.modal-overlay').forEach(function(o){
 function renderAll() {
   buildRunSessions();
   buildSessions();
+  buildMealChecklist();
   updateWeekGrid();
   updateRecovery();
   updateSessCount();
