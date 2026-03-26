@@ -480,7 +480,7 @@ textarea{resize:vertical;min-height:80px;font-size:11px;line-height:1.5}
       <button class="btn-ai" onclick="openWeeklyAI()">⚡ AI WEEKLY ANALYSIS + ADJUST</button>
       <button class="btn-outline" onclick="openExport()">📤 Export JSON</button>
       <button class="btn-outline" onclick="openImport()">📥 Import JSON</button>
-      <button class="btn-outline" onclick="nextDay()">→ Advance Day</button>
+      <button class="btn-outline" onclick="nextDay()">⚙ Force Next Week (testing)</button>
       <button class="btn-danger" onclick="confirmReset()">↺ Reset Week</button>
     </div>
   </div>
@@ -952,14 +952,57 @@ const RUN_SESSIONS = [
 ];
 
 // ══════════════════════════════════════
+// DATE UTILITIES
+// ══════════════════════════════════════
+
+// Returns today as YYYY-MM-DD in local time
+function todayISO() {
+  var d = new Date();
+  return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate());
+}
+
+function pad2(n) { return n < 10 ? '0'+n : String(n); }
+
+// Returns day-of-week index: Mon=0, Tue=1, ... Sun=6
+function realDow() {
+  var d = new Date().getDay(); // JS: Sun=0, Mon=1 ... Sat=6
+  return d === 0 ? 6 : d - 1; // convert to Mon=0
+}
+
+// Returns the ISO date (YYYY-MM-DD) of the Monday of the current real week
+function thisWeekMonday() {
+  var d = new Date();
+  var day = d.getDay(); // Sun=0
+  var diff = day === 0 ? -6 : 1 - day; // days back to Monday
+  var mon = new Date(d.getFullYear(), d.getMonth(), d.getDate() + diff);
+  return mon.getFullYear()+'-'+pad2(mon.getMonth()+1)+'-'+pad2(mon.getDate());
+}
+
+// Returns week number since a reference Monday (first Monday ever used)
+function weekNumFromMonday(mondayISO) {
+  var ref = new Date('2025-01-06'); // fixed reference Monday
+  var mon = new Date(mondayISO);
+  var diffMs = mon - ref;
+  var diffWeeks = Math.floor(diffMs / (7 * 24 * 3600 * 1000));
+  return Math.max(1, diffWeeks + 1);
+}
+
+// Daily nutrition key — one entry per calendar day
+function todayNutrKey() { return 'nutr_' + todayISO(); }
+
+// ══════════════════════════════════════
 // STATE
 // ══════════════════════════════════════
 function freshState() {
+  var mon = thisWeekMonday();
   return {
-    week:1, dow:0,
+    weekStartMonday: mon,            // YYYY-MM-DD of this week's Monday
+    week: weekNumFromMonday(mon),    // absolute week number
     sessions:[null,null,null,null,null],
-    runLogs:{},    // {dow: {done:bool, distance:num, time:num, notes:str}}
+    runLogs:{},
     setLogs:{},
+    nutritionByDate:{},              // {YYYY-MM-DD: {cal,protein,carbs,fat}}
+    // legacy field kept for compat — will sync from nutritionByDate
     nutrition:{cal:0,protein:0,carbs:0,fat:0},
     weights:[],
     sleepLog:[],
@@ -977,10 +1020,73 @@ var S = (function(){
   catch(e){ return freshState(); }
 })();
 
-// Ensure runLogs exists on old state
+// ── Migrate old state that used dow/week integers ──────────────────────────
 if (!S.runLogs) S.runLogs = {};
+if (!S.nutritionByDate) {
+  S.nutritionByDate = {};
+  // Migrate legacy nutrition field into today's date
+  if (S.nutrition && (S.nutrition.cal || S.nutrition.protein)) {
+    S.nutritionByDate[todayISO()] = {
+      cal:S.nutrition.cal||0, protein:S.nutrition.protein||0,
+      carbs:S.nutrition.carbs||0, fat:S.nutrition.fat||0
+    };
+  }
+}
+if (!S.weekStartMonday) {
+  S.weekStartMonday = thisWeekMonday();
+  S.week = weekNumFromMonday(S.weekStartMonday);
+}
+
+// ── Auto-detect week rollover on every load ────────────────────────────────
+function checkWeekRollover() {
+  var currentMon = thisWeekMonday();
+  if (S.weekStartMonday !== currentMon) {
+    errLog('info','Week rollover detected','old: '+S.weekStartMonday+' new: '+currentMon);
+    // Archive the old week
+    if (!S.history) S.history = [];
+    S.history.push({
+      week: S.week,
+      weekStartMonday: S.weekStartMonday,
+      sessions: S.sessions.slice(),
+      nutritionByDate: JSON.parse(JSON.stringify(S.nutritionByDate||{})),
+      weights: S.weights.slice(0,3),
+      sleepLog: (S.sleepLog||[]).slice(0,7),
+      setLogs: JSON.parse(JSON.stringify(S.setLogs||{})),
+      cyclingDays: (S.cyclingDays||[]).slice(),
+      runLogs: JSON.parse(JSON.stringify(S.runLogs||{}))
+    });
+    if (S.history.length > 24) S.history = S.history.slice(-24);
+    // Reset for new week
+    S.weekStartMonday = currentMon;
+    S.week = weekNumFromMonday(currentMon);
+    S.sessions = [null,null,null,null,null];
+    S.nutritionByDate = {};
+    S.nutrition = {cal:0,protein:0,carbs:0,fat:0};
+    S.meals = [false,false,false,false,false];
+    S.supps = [false,false,false,false,false];
+    S.setLogs = {}; S.runLogs = {}; S.cyclingDays = [];
+    save();
+  }
+}
+
+// Get today's nutrition object (creates if missing)
+function todayNutr() {
+  var key = todayISO();
+  if (!S.nutritionByDate[key]) S.nutritionByDate[key] = {cal:0,protein:0,carbs:0,fat:0};
+  return S.nutritionByDate[key];
+}
+
+// Get today's calorie target based on day of week
+function todayCalTarget() {
+  var dow = realDow();
+  if (dow === 2) return TARGETS_RUN;   // Wednesday — run + gym
+  if (dow === 5) return TARGETS_LONG;  // Saturday — long run
+  return TARGETS;
+}
 
 function save() {
+  // Keep legacy nutrition field in sync with today's entry for compat
+  S.nutrition = todayNutr();
   S.lastModified = new Date().toISOString();
   localStorage.setItem('apex_v5', JSON.stringify(S));
   schedulePush();
@@ -1181,7 +1287,7 @@ function promptSignOut() {
   if (!confirm('Sign out of ' + gUser.email + '?')) return;
   if (typeof google !== 'undefined' && gToken) { try { google.accounts.oauth2.revoke(gToken, function(){}); } catch(e){} }
   gToken=null; gUser=null; gSheetId=null;
-  ['apex_gt','apex_gte','apex_guser','apex_sid','apex_skipped'].forEach(function(k){ localStorage.removeItem(k); });
+  ['apex_gt','apex_gte','apex_guser','apex_sid','apex_skipped','apex_drive_disabled'].forEach(function(k){ localStorage.removeItem(k); });
   updateGoogleUI();
   setSyncStatus('','Local mode');
   document.getElementById('authScreen').classList.remove('hidden');
@@ -1211,52 +1317,119 @@ function updateSheetLink() {
 
 function findOrCreateSheet() {
   if (gSheetId) { updateSheetLink(); return Promise.resolve(); }
+
+  // Restore folder ID from storage if available
   var fid = getFolderIdLS();
-  if (fid) { gFolderId = fid; return findOrCreateSheetInFolder(); }
-  // Step 1: find or create the folder
-  return gFetch('https://www.googleapis.com/drive/v3/files?q=name%3D%27'+encodeURIComponent(FOLDER_NAME)+'%27+and+mimeType%3D%27application%2Fvnd.google-apps.folder%27+and+trashed%3Dfalse&fields=files(id)')
-    .then(function(r){
-      if (r.files && r.files.length > 0) {
-        gFolderId = r.files[0].id;
+  if (fid) gFolderId = fid;
+
+  // If we already know Drive is unavailable, skip straight to Sheets-only creation
+  if (localStorage.getItem('apex_drive_disabled')) {
+    return createSheetDirectly();
+  }
+
+  // Step 1: try to find/create the Drive folder
+  return gFetch(
+    'https://www.googleapis.com/drive/v3/files' +
+    '?q=name%3D%27'+encodeURIComponent(FOLDER_NAME)+'%27' +
+    '+and+mimeType%3D%27application%2Fvnd.google-apps.folder%27' +
+    '+and+trashed%3Dfalse&fields=files(id)'
+  )
+  .then(function(r){
+    if (r.files && r.files.length > 0) {
+      gFolderId = r.files[0].id;
+      localStorage.setItem('apex_fid', gFolderId);
+      errLog('info','Found Drive folder',gFolderId);
+    } else {
+      return gFetch('https://www.googleapis.com/drive/v3/files', {
+        method:'POST',
+        body:JSON.stringify({name:FOLDER_NAME, mimeType:'application/vnd.google-apps.folder'})
+      }).then(function(r){
+        gFolderId = r.id;
         localStorage.setItem('apex_fid', gFolderId);
-        return;
-      }
-      return gFetch('https://www.googleapis.com/drive/v3/files', {method:'POST', body:JSON.stringify({
-        name: FOLDER_NAME,
-        mimeType: 'application/vnd.google-apps.folder'
-      })}).then(function(r){ gFolderId = r.id; localStorage.setItem('apex_fid', gFolderId); });
-    })
-    .then(function(){ return findOrCreateSheetInFolder(); })
-    .catch(function(e){ errLog('warn','Folder create failed — trying root',e.message); return findOrCreateSheetInFolder(); });
+        errLog('info','Created Drive folder',gFolderId);
+      });
+    }
+  })
+  .then(function(){ return findOrCreateSheetInFolder(); })
+  .catch(function(e){
+    // Drive API not enabled — remember this so we don't retry every time
+    errLog('warn','Drive API unavailable — sheet will be created in root Drive. Enable Drive API at console.developers.google.com for folder support.',e.message);
+    localStorage.setItem('apex_drive_disabled','1');
+    gFolderId = null;
+    return createSheetDirectly();
+  });
 }
 
+// Search for sheet within folder (or root if no folder) using Drive API
 function findOrCreateSheetInFolder() {
-  var q = 'name%3D%27'+encodeURIComponent(SHEET_NAME)+'%27+and+mimeType%3D%27application%2Fvnd.google-apps.spreadsheet%27+and+trashed%3Dfalse';
+  var q = 'name%3D%27'+encodeURIComponent(SHEET_NAME)+'%27' +
+          '+and+mimeType%3D%27application%2Fvnd.google-apps.spreadsheet%27' +
+          '+and+trashed%3Dfalse';
   if (gFolderId) q += '+and+%27'+gFolderId+'%27+in+parents';
+
   return gFetch('https://www.googleapis.com/drive/v3/files?q='+q+'&fields=files(id)')
     .then(function(r){
       if (r.files && r.files.length > 0) {
         gSheetId = r.files[0].id;
         localStorage.setItem('apex_sid', gSheetId);
+        errLog('info','Found existing sheet',gSheetId);
         updateSheetLink();
         return;
       }
-      var body = {
-        properties:{title:SHEET_NAME},
-        sheets:[{properties:{title:'State'}},{properties:{title:'WeightLog'}},{properties:{title:'SleepLog'}},{properties:{title:'RunLog'}},{properties:{title:'History'}}]
-      };
-      return gFetch('https://sheets.googleapis.com/v4/spreadsheets', {method:'POST', body:JSON.stringify(body)})
-        .then(function(r){
-          gSheetId = r.spreadsheetId;
-          localStorage.setItem('apex_sid', gSheetId);
-          updateSheetLink();
-          // Move into folder if we have one
-          if (gFolderId) {
-            return gFetch('https://www.googleapis.com/drive/v3/files/'+gSheetId+'?addParents='+gFolderId+'&fields=id', {method:'PATCH', body:JSON.stringify({})}).catch(function(){});
-          }
-        });
+      return createSheetDirectly().then(function(){
+        // Move new sheet into folder if we have one
+        if (gFolderId && gSheetId) {
+          return gFetch(
+            'https://www.googleapis.com/drive/v3/files/'+gSheetId+
+            '?addParents='+gFolderId+'&fields=id',
+            {method:'PATCH', body:JSON.stringify({})}
+          ).then(function(){
+            errLog('info','Sheet moved into folder',gFolderId);
+          }).catch(function(e){
+            errLog('warn','Could not move sheet into folder',e.message);
+          });
+        }
+      });
     })
-    .catch(function(e){ errLog('error','Sheet find/create failed',e.message); });
+    .catch(function(e){
+      errLog('warn','Drive search failed — falling back to direct sheet creation',e.message);
+      return createSheetDirectly();
+    });
+}
+
+// Create sheet using Sheets API only — no Drive API required
+function createSheetDirectly() {
+  // First check if we already created one (stored ID but lost it somehow)
+  var existingId = getSheetIdLS();
+  if (existingId) {
+    gSheetId = existingId;
+    updateSheetLink();
+    errLog('info','Restored sheet ID from storage',existingId);
+    return Promise.resolve();
+  }
+  errLog('info','Creating new sheet via Sheets API (no Drive required)','');
+  return gFetch('https://sheets.googleapis.com/v4/spreadsheets', {
+    method:'POST',
+    body:JSON.stringify({
+      properties:{title:SHEET_NAME},
+      sheets:[
+        {properties:{title:'State'}},
+        {properties:{title:'WeightLog'}},
+        {properties:{title:'SleepLog'}},
+        {properties:{title:'NutritionLog'}},
+        {properties:{title:'RunLog'}},
+        {properties:{title:'History'}}
+      ]
+    })
+  }).then(function(r){
+    gSheetId = r.spreadsheetId;
+    localStorage.setItem('apex_sid', gSheetId);
+    localStorage.removeItem('apex_drive_disabled'); // reset — Drive may become available
+    errLog('info','Sheet created via Sheets API',gSheetId);
+    updateSheetLink();
+  }).catch(function(e){
+    errLog('error','Sheet creation failed completely',e.message);
+  });
 }
 
 function gFetch(url, opts) {
@@ -1316,18 +1489,43 @@ function pushToSheet() {
   if (!gToken || !gSheetId) return;
   if (!isOnline) { syncQueue.push(1); setSyncStatus('offline','Offline — queued'); return; }
   setSyncStatus('syncing','Saving...');
-  var rows = [[S.lastModified, JSON.stringify(S)]];
-  var wRows = S.weights.map(function(w){ return [w.date, w.val, new Date().toISOString()]; });
+
+  // Full state blob in State tab
+  var stateRow  = [[S.lastModified, JSON.stringify(S)]];
+  // Individual log tabs for human-readable history
+  var wRows  = S.weights.map(function(w){ return [w.date, w.val, new Date().toISOString()]; });
   var slRows = (S.sleepLog||[]).map(function(s){ return [s.date, s.bed, s.wake, s.hrs, s.quality]; });
-  var hRows = (S.history||[]).map(function(h){ return [h.week, JSON.stringify(h)]; });
-  var data = [{range:'State!A1:B1',values:rows}];
-  if (wRows.length) data.push({range:'WeightLog!A2:C'+(1+wRows.length),values:wRows});
-  if (slRows.length) data.push({range:'SleepLog!A2:E'+(1+slRows.length),values:slRows});
-  if (hRows.length) data.push({range:'History!A2:B'+(1+hRows.length),values:hRows});
-  gFetch('https://sheets.googleapis.com/v4/spreadsheets/'+gSheetId+'/values:batchUpdate',{
+  var hRows  = (S.history||[]).map(function(h){ return [h.week||'', h.weekStartMonday||'', JSON.stringify(h)]; });
+  // Run log rows
+  var runRows = [];
+  Object.keys(S.runLogs||{}).forEach(function(dow){
+    var r = S.runLogs[dow];
+    if (r) runRows.push([dow, r.type||'', r.done?'yes':'no', r.distance||'', r.time||'', S.weekStartMonday||'']);
+  });
+  // Nutrition by date rows
+  var nutrRows = Object.keys(S.nutritionByDate||{}).map(function(date){
+    var n = S.nutritionByDate[date];
+    return [date, n.cal||0, n.protein||0, n.carbs||0, n.fat||0];
+  });
+
+  var data = [{range:'State!A1:B1', values:stateRow}];
+  if (wRows.length)    data.push({range:'WeightLog!A2:C'+(1+wRows.length),    values:wRows});
+  if (slRows.length)   data.push({range:'SleepLog!A2:E'+(1+slRows.length),    values:slRows});
+  if (hRows.length)    data.push({range:'History!A2:C'+(1+hRows.length),      values:hRows});
+  if (runRows.length)  data.push({range:'RunLog!A2:F'+(1+runRows.length),      values:runRows});
+  if (nutrRows.length) data.push({range:'NutritionLog!A2:E'+(1+nutrRows.length), values:nutrRows});
+
+  gFetch('https://sheets.googleapis.com/v4/spreadsheets/'+gSheetId+'/values:batchUpdate', {
     method:'POST', body:JSON.stringify({valueInputOption:'RAW', data:data})
-  }).then(function(){ setSyncStatus('synced','Synced · '+(gUser&&gUser.email||'')); syncQueue=[]; })
-    .catch(function(e){ errLog('error','pushToSheet failed',e.message); setSyncStatus('error','Sync error — will retry'); setTimeout(pushToSheet,10000); });
+  }).then(function(){
+    setSyncStatus('synced','Synced · '+(gUser&&gUser.email||''));
+    syncQueue=[];
+    errLog('info','Sync OK','rows: w='+wRows.length+' sl='+slRows.length+' h='+hRows.length);
+  }).catch(function(e){
+    errLog('error','pushToSheet failed',e.message);
+    setSyncStatus('error','Sync error — will retry');
+    setTimeout(pushToSheet,10000);
+  });
 }
 
 function processSyncQueue() { if (syncQueue.length && gToken && gSheetId) { syncQueue=[]; pushToSheet(); } }
@@ -1692,17 +1890,17 @@ function addSet(si, ei) {
 function updateWeekGrid() {
   var g = document.getElementById('wkGrid');
   g.innerHTML = '';
+  var todayDow = realDow();
   DAY_LABELS.forEach(function(lbl, i){
     var div = document.createElement('div');
     div.className = 'dp';
     var isTrain  = TRAIN_DAYS.indexOf(i) !== -1;
     var isRun    = RUN_DAYS.indexOf(i) !== -1;
     var si       = TRAIN_DAYS.indexOf(i);
-    var ri       = RUN_DAYS.indexOf(i);
     var st       = isTrain ? S.sessions[si] : null;
     var runLog   = isRun   ? (S.runLogs[i] || null) : null;
     var isCycle  = (S.cyclingDays||[]).indexOf(i) !== -1;
-    var isToday  = i === S.dow;
+    var isToday  = i === todayDow;
 
     if (st==='done') div.classList.add('done-d');
     else if (st==='missed') div.classList.add('miss-d');
@@ -1764,29 +1962,34 @@ function updateSessCount() {
 // NUTRITION
 // ══════════════════════════════════════
 function logNutrition() {
-  S.nutrition.cal     += parseFloat(document.getElementById('nCal').value)  || 0;
-  S.nutrition.protein += parseFloat(document.getElementById('nProt').value) || 0;
-  S.nutrition.carbs   += parseFloat(document.getElementById('nCarb').value) || 0;
-  S.nutrition.fat     += parseFloat(document.getElementById('nFat').value)  || 0;
+  var n = todayNutr();
+  n.cal     += parseFloat(document.getElementById('nCal').value)  || 0;
+  n.protein += parseFloat(document.getElementById('nProt').value) || 0;
+  n.carbs   += parseFloat(document.getElementById('nCarb').value) || 0;
+  n.fat     += parseFloat(document.getElementById('nFat').value)  || 0;
   save(); updateNutritionUI();
   ['nCal','nProt','nCarb','nFat'].forEach(function(id){ document.getElementById(id).value=''; });
 }
 
 function updateNutritionUI() {
-  var n = S.nutrition;
-  var rem = Math.max(0, TARGETS.cal - n.cal);
-  document.getElementById('calRem').textContent = rem;
+  var n   = todayNutr();
+  var tgt = todayCalTarget();   // auto-adjusts: 2400 standard, 2700 Wed, 2900 Sat
+  var rem = Math.max(0, tgt.cal - n.cal);
+  document.getElementById('calRem').textContent    = rem;
   document.getElementById('calLogged').textContent = Math.round(n.cal);
-  document.getElementById('dashProt').innerHTML = Math.round(n.protein)+'<span>g</span>';
-  var pct = Math.min(n.cal/TARGETS.cal, 1);
+  document.getElementById('dashProt').innerHTML    = Math.round(n.protein)+'<span>g</span>';
+  var pct  = Math.min(n.cal/tgt.cal, 1);
   var circ = 201;
   var ring = document.getElementById('calRing');
   ring.setAttribute('stroke-dashoffset', circ - pct*circ);
-  ring.setAttribute('stroke', pct > 1 ? 'var(--red)' : pct > 0.85 ? 'var(--orange)' : 'var(--accent)');
-  setBar('pbCal','lbCal',n.cal,TARGETS.cal,'kcal','var(--accent)');
-  setBar('pbProt','lbProt',n.protein,TARGETS.protein,'g','var(--protein)');
-  setBar('pbCarb','lbCarb',n.carbs,TARGETS.carbs,'g','var(--carbs)');
-  setBar('pbFat','lbFat',n.fat,TARGETS.fat,'g','var(--fat)');
+  ring.setAttribute('stroke', pct>1?'var(--red)':pct>0.85?'var(--orange)':'var(--accent)');
+  // Update calorie ring sub-label with today's actual target
+  var subEl = document.querySelector('#panel-dashboard .ring-sub');
+  if (subEl) subEl.textContent = Math.round(n.cal)+' / '+tgt.cal+' kcal'+(tgt===TARGETS_RUN?' (run day)':tgt===TARGETS_LONG?' (long run)':'');
+  setBar('pbCal','lbCal',n.cal,tgt.cal,'kcal','var(--accent)');
+  setBar('pbProt','lbProt',n.protein,tgt.protein,'g','var(--protein)');
+  setBar('pbCarb','lbCarb',n.carbs,tgt.carbs,'g','var(--carbs)');
+  setBar('pbFat','lbFat',n.fat,tgt.fat,'g','var(--fat)');
 }
 
 function setBar(fid, lid, val, tgt, unit, color) {
@@ -1893,40 +2096,54 @@ function updateSleepUI() {
 // WEEK / DAY
 // ══════════════════════════════════════
 function updateWeekBadge() {
+  var dow = realDow();
+  var days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+  var today = new Date();
+  var dateStr = today.toLocaleDateString('en-GB',{day:'numeric',month:'short'});
+
   document.getElementById('wkBadge').textContent = 'WEEK '+S.week;
-  document.getElementById('wkNum').textContent = S.week;
+  document.getElementById('wkNum').textContent   = S.week;
   document.getElementById('aiWkNum').textContent = S.week;
-  document.getElementById('dayLbl').textContent = 'Day '+(S.dow+1)+' of 7';
-  // Only show refeed alert if it's genuinely day 7 AND user has logged real data this week
+  document.getElementById('dayLbl').textContent  = days[dow]+' · '+dateStr;
+
+  // Refeed = Saturday (long run day), only if real data exists
   var hasData = S.sessions.some(function(s){ return s!==null; }) || S.weights.length > 0;
-  document.getElementById('alertRefeed').className = (S.dow===6 && hasData)?'alert al-yellow show':'alert al-yellow';
+  document.getElementById('alertRefeed').className = (dow===5 && hasData)?'alert al-yellow show':'alert al-yellow';
 }
 
 function nextDay() {
-  S.dow++;
-  if (S.dow >= 7) {
-    S.dow = 0; S.week++;
-    if (!S.history) S.history = [];
-    S.history.push({week:S.week-1, sessions:S.sessions.slice(), nutrition:Object.assign({},S.nutrition),
-      weights:S.weights.slice(0,3), sleepLog:(S.sleepLog||[]).slice(0,7),
-      setLogs:JSON.parse(JSON.stringify(S.setLogs)), cyclingDays:(S.cyclingDays||[]).slice()});
-    if (S.history.length>24) S.history = S.history.slice(-24);
-    S.sessions=[null,null,null,null,null];
-    S.nutrition={cal:0,protein:0,carbs:0,fat:0};
-    S.meals=[false,false,false,false,false];
-    S.supps=[false,false,false,false,false];
-    S.setLogs={}; S.runLogs={}; S.cyclingDays=[];
-  }
+  // Manual override — advances the week counter only (used for testing)
+  // In normal use, week rollover happens automatically via checkWeekRollover()
+  if (!confirm('Manually advance to next week? This is normally automatic.')) return;
+  if (!S.history) S.history = [];
+  S.history.push({
+    week:S.week, weekStartMonday:S.weekStartMonday,
+    sessions:S.sessions.slice(), nutritionByDate:JSON.parse(JSON.stringify(S.nutritionByDate||{})),
+    weights:S.weights.slice(0,3), sleepLog:(S.sleepLog||[]).slice(0,7),
+    setLogs:JSON.parse(JSON.stringify(S.setLogs||{})),
+    cyclingDays:(S.cyclingDays||[]).slice(), runLogs:JSON.parse(JSON.stringify(S.runLogs||{}))
+  });
+  if (S.history.length>24) S.history=S.history.slice(-24);
+  // Compute next Monday
+  var nextMon = new Date(S.weekStartMonday);
+  nextMon.setDate(nextMon.getDate()+7);
+  S.weekStartMonday = nextMon.getFullYear()+'-'+pad2(nextMon.getMonth()+1)+'-'+pad2(nextMon.getDate());
+  S.week = weekNumFromMonday(S.weekStartMonday);
+  S.sessions=[null,null,null,null,null];
+  S.nutritionByDate={}; S.nutrition={cal:0,protein:0,carbs:0,fat:0};
+  S.meals=[false,false,false,false,false];
+  S.supps=[false,false,false,false,false];
+  S.setLogs={}; S.runLogs={}; S.cyclingDays=[];
   save(); renderAll();
 }
 
 function confirmReset() {
-  if (!confirm('Reset this week?')) return;
+  if (!confirm('Reset this week\'s sessions, nutrition and set data?')) return;
   S.sessions=[null,null,null,null,null];
-  S.nutrition={cal:0,protein:0,carbs:0,fat:0};
+  S.nutritionByDate={}; S.nutrition={cal:0,protein:0,carbs:0,fat:0};
   S.meals=[false,false,false,false,false];
   S.supps=[false,false,false,false,false];
-  S.setLogs={}; S.runLogs={}; S.dow=0; S.cyclingDays=[];
+  S.setLogs={}; S.runLogs={}; S.cyclingDays=[];
   save(); renderAll();
 }
 
@@ -2103,6 +2320,9 @@ function renderAll() {
 // BOOT — always runs immediately
 // ══════════════════════════════════════
 (function(){
+  // Check if we've crossed into a new week since last visit
+  checkWeekRollover();
+
   // Render app immediately — nothing blocks this
   renderAll();
 
@@ -2120,11 +2340,14 @@ function renderAll() {
         gToken = stored;
         try { gUser = JSON.parse(storedUser); } catch(e){}
         var sid = getSheetIdLS();
-        if (sid) gSheetId = sid;
+        if (sid) { gSheetId = sid; }
         updateGoogleUI();
         updateSyncBarState();
         // Pull latest data in background
-        findOrCreateSheet().then(function(){ return pullAndMerge(); }).then(function(){ updateSyncBarState(); });
+        findOrCreateSheet()
+          .then(function(){ return pullAndMerge(); })
+          .then(function(){ updateSyncBarState(); renderAll(); })
+          .catch(function(e){ errLog('error','Boot sheet/pull failed',e.message); });
       } else {
         // Token expired — silent refresh after SDK loads
         waitForSDK(trySilentRefresh);
@@ -2132,6 +2355,18 @@ function renderAll() {
     }
   }
   // If first visit, auth screen stays visible (default)
+
+  // Set up a daily midnight check — if app is left open overnight, auto-rollover
+  var msToMidnight = (function(){
+    var n = new Date(), m = new Date(n.getFullYear(),n.getMonth(),n.getDate()+1,0,0,10);
+    return m - n;
+  })();
+  setTimeout(function(){
+    checkWeekRollover();
+    renderAll();
+    // Re-schedule for next midnight
+    setInterval(function(){ checkWeekRollover(); renderAll(); }, 24*60*60*1000);
+  }, msToMidnight);
 })();
 </script>
 </body>
