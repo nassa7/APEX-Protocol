@@ -295,8 +295,27 @@ textarea{resize:vertical;min-height:80px;font-size:11px;line-height:1.5}
 .step-link{color:var(--blue);text-decoration:none;word-break:break-all}
 .code-block{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:8px 10px;font-family:var(--fm);font-size:10px;color:var(--accent);margin-top:6px;word-break:break-all;line-height:1.5}
 
-/* WEIGHT LOG */
-.wl-item{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.03);font-family:var(--fm)}
+/* RUN SESSIONS */
+.run-card{background:var(--card);border:1px solid rgba(62,255,170,.25);border-radius:var(--r);overflow:hidden;margin-bottom:11px;position:relative}
+.run-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--green)}
+.run-hdr{display:flex;justify-content:space-between;align-items:center;padding:13px 16px;cursor:pointer}
+.run-hdr:active{background:var(--bg3)}
+.run-type{font-family:var(--fm);font-size:8px;font-weight:600;letter-spacing:3px;color:var(--green);text-transform:uppercase;margin-bottom:2px}
+.run-name{font-size:16px;font-weight:800;letter-spacing:-.3px}
+.run-meta{font-family:var(--fm);font-size:10px;color:var(--muted);margin-top:2px}
+.run-body{display:none;border-top:1px solid var(--border);padding:14px 16px}
+.run-body.open{display:block}
+.run-stat-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.run-stat{background:var(--bg3);border:1px solid var(--border);border-radius:9px;padding:10px 12px}
+.run-stat-lbl{font-family:var(--fm);font-size:8px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:4px}
+.run-stat-val{font-size:14px;font-weight:700}
+.run-note-box{background:rgba(62,255,170,.04);border:1px solid rgba(62,255,170,.15);border-radius:8px;padding:10px 12px;font-family:var(--fm);font-size:10px;color:var(--green);line-height:1.55;margin-bottom:12px}
+.run-log-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.run-done-btn{width:100%;padding:11px;background:var(--green);color:#07070f;border:none;border-radius:9px;font-family:var(--ff);font-size:13px;font-weight:700;cursor:pointer;transition:all .18s}
+.run-done-btn.completed{background:rgba(62,255,170,.12);border:1px solid var(--green);color:var(--green)}
+.run-miss-btn{width:100%;padding:11px;background:var(--bg3);color:var(--muted);border:1px solid var(--border);border-radius:9px;font-family:var(--ff);font-size:13px;font-weight:600;cursor:pointer;margin-top:7px}
+
+
 .wl-item:last-child{border-bottom:none}
 .wl-date{font-size:10px;color:var(--muted)}
 .wl-val{font-size:14px;font-weight:500}
@@ -458,7 +477,13 @@ textarea{resize:vertical;min-height:80px;font-size:11px;line-height:1.5}
 <!-- TRAINING -->
 <div class="panel" id="panel-training">
   <div class="tip tip-blue">🔄 PREHAB before every Push — Band External Rotation 2×15 each side + Face Pulls 2×20.</div>
-  <div class="tip tip-orange">🚴 Cycling day: +100–150 kcal burned. Add a small carb snack. Don't eat back the full deficit.</div>
+  <div class="tip tip-orange">🏃 RUNNING DAYS: Wed lunchtime (5km easy) + Sat morning (10–15km). Eat carbs before and after. At least 6 hours between run and gym on Wednesday.</div>
+  <div class="tip" style="background:rgba(62,255,170,.05);border:1px solid rgba(62,255,170,.2);color:var(--green);font-family:var(--fm);font-size:10px;padding:11px 13px;border-radius:10px;margin-bottom:11px">✓ Sets require weight AND reps before they can be logged. Fill both fields then tap ✓.</div>
+
+  <!-- RUN SESSIONS -->
+  <div id="runSessionList"></div>
+
+  <!-- GYM SESSIONS -->
   <div id="sessionList"></div>
 </div>
 
@@ -473,9 +498,10 @@ textarea{resize:vertical;min-height:80px;font-size:11px;line-height:1.5}
       <div class="mc"><div class="mc-ico">🥑</div><div class="mc-n">Fat</div><div class="mc-v" style="color:var(--fat)">70<span style="font-size:11px;color:var(--muted)">g</span></div><div class="mc-t">630 kcal</div></div>
     </div>
     <div class="div"></div>
-    <div class="fb sm"><span class="mut">Daily total</span><span class="acc" style="font-size:15px;font-weight:800">2,400 kcal</span></div>
-    <div class="fb sm" style="margin-top:5px"><span class="mut">Refeed (Day 7)</span><span>3,000 kcal · 350g carbs</span></div>
-    <div class="fb sm" style="margin-top:5px"><span class="mut">Cycling day</span><span class="blue">2,550 kcal max</span></div>
+    <div class="fb sm"><span class="mut">Daily total (standard)</span><span class="acc" style="font-size:15px;font-weight:800">2,400 kcal</span></div>
+    <div class="fb sm" style="margin-top:5px"><span class="mut">Wed (run + gym day)</span><span class="green">2,700 kcal · 310g carbs</span></div>
+    <div class="fb sm" style="margin-top:5px"><span class="mut">Sat (long run · replaces refeed)</span><span style="color:var(--orange)">2,900 kcal · 370g carbs</span></div>
+    <div class="fb sm" style="margin-top:5px"><span class="mut">Cycling day (+150 kcal)</span><span class="blue">2,550 kcal max</span></div>
   </div>
   <div class="card">
     <div class="lbl">Log Today's Intake</div>
@@ -594,7 +620,7 @@ textarea{resize:vertical;min-height:80px;font-size:11px;line-height:1.5}
         <div id="gAvatar"></div>
       </div>
       <div class="tip tip-green" style="margin-bottom:10px">✓ Syncing to Google Sheets automatically.</div>
-      <div class="sm mut" style="margin-bottom:10px">Sheet: <span style="color:var(--blue);cursor:pointer" onclick="openSheet()">View your data sheet →</span></div>
+      <div class="sm mut" style="margin-bottom:10px">Sheet: <span id="sheetLinkEl" style="color:var(--blue);cursor:pointer;opacity:0.5" onclick="openSheet()">Creating sheet…</span></div>
       <button class="btn-outline" onclick="forceSyncNow()" style="margin-bottom:7px">↑ Force Sync Now</button>
       <button class="btn-danger" onclick="promptSignOut()">Sign Out</button>
     </div>
@@ -706,11 +732,15 @@ textarea{resize:vertical;min-height:80px;font-size:11px;line-height:1.5}
 // ══════════════════════════════════════
 // CONSTANTS
 // ══════════════════════════════════════
-const TARGETS = {cal:2400,protein:210,carbs:233,fat:70};
-const DAY_LABELS = ['MON','TUE','WED','THU','FRI','SAT','SUN'];
-const TRAIN_DAYS = [0,1,2,3,4];
+const TARGETS      = {cal:2400,protein:210,carbs:233,fat:70};
+const TARGETS_RUN  = {cal:2700,protein:210,carbs:310,fat:70};   // Wed lunchtime run day
+const TARGETS_LONG = {cal:2900,protein:210,carbs:370,fat:75};   // Sat long run / refeed
+const DAY_LABELS   = ['MON','TUE','WED','THU','FRI','SAT','SUN'];
+const TRAIN_DAYS   = [0,1,2,3,4];   // Mon–Fri gym
+const RUN_DAYS     = [2,5];          // Wed (short), Sat (long)
 const SLEEP_TARGET = 7.75;
-const SHEET_NAME = 'APEX_Protocol_Data';
+const SHEET_NAME   = 'APEX_Protocol_Data';
+const FOLDER_NAME  = 'Gym Workout Data';
 
 const MUSCLE_GROUPS = [
   {key:'chest',label:'Chest',icon:'🫁'},
@@ -740,13 +770,13 @@ const SESSIONS_DEF = [
     {name:'Incline DB Curl',note:'',sets:'3×10–12',rpe:'8',tempo:'3-0-X-1',rest:90,muscles:['biceps']},
     {name:'Hammer Curl',note:'',sets:'3×12–15',rpe:'7',tempo:'2-0-X-0',rest:60,muscles:['biceps']}
   ]},
-  {day:'Day 3 — Wednesday',name:'LEGS',focus:'Quad Dominant · Hamstrings · Calves',exercises:[
+  {day:'Day 3 — Wednesday',name:'LEGS',focus:'Quad · Hamstrings · Calves  |  🏃 Short Run at Lunch',runNote:'Short run at lunch (5km easy, ~30 min, Zone 2). Eat carb-focused lunch after. Legs gym at 7pm as normal — reduce RPE by 1 if legs are heavy from run.',exercises:[
     {name:'Leg Press',note:'Shoulder-width feet',sets:'4×10–12',rpe:'8',tempo:'3-1-X-0',rest:150,muscles:['quads']},
-    {name:'Hack / Smith Squat',note:'',sets:'3×8–10',rpe:'8',tempo:'3-1-X-0',rest:150,muscles:['quads']},
-    {name:'Leg Extension',note:'',sets:'4×15–20',rpe:'7',tempo:'2-1-2-1',rest:60,muscles:['quads']},
+    {name:'Hack / Smith Squat',note:'Reduce sets to 2 if run fatigue is high',sets:'3×8–10',rpe:'7',tempo:'3-1-X-0',rest:150,muscles:['quads']},
+    {name:'Leg Extension',note:'',sets:'3×15–20',rpe:'7',tempo:'2-1-2-1',rest:60,muscles:['quads']},
     {name:'Romanian DL',note:'DB, hinge focus',sets:'3×10–12',rpe:'7',tempo:'3-1-X-0',rest:120,muscles:['hamstrings']},
-    {name:'Leg Curl',note:'Seated or lying',sets:'3×12–15',rpe:'8',tempo:'2-1-2-1',rest:90,muscles:['hamstrings']},
-    {name:'Standing Calf Raise',note:'Bilateral, heel planted',sets:'4×15–20',rpe:'7',tempo:'2-1-3-0',rest:60,muscles:[]}
+    {name:'Leg Curl',note:'Seated or lying',sets:'3×12–15',rpe:'7',tempo:'2-1-2-1',rest:90,muscles:['hamstrings']},
+    {name:'Standing Calf Raise',note:'Bilateral, heel planted',sets:'3×15–20',rpe:'6',tempo:'2-1-3-0',rest:60,muscles:[]}
   ]},
   {day:'Day 4 — Thursday',name:'UPPER',focus:'Strength Focus',exercises:[
     {name:'Flat DB Press',note:'',sets:'4×6–8',rpe:'9',tempo:'3-1-X-0',rest:150,muscles:['chest','shoulders']},
@@ -768,6 +798,26 @@ const SESSIONS_DEF = [
   ]}
 ];
 
+// Run sessions (displayed separately in Training tab)
+const RUN_SESSIONS = [
+  {
+    dow:2, label:'Wednesday — Short Run', type:'short',
+    distance:'5km', effort:'Zone 2 (easy, conversational pace)',
+    timing:'Lunchtime (~12–1pm). Eat carb-focused meal after. 6hrs before gym.',
+    nutrition:'Have 30g fast carbs (banana, sports drink) 20 min before. Eat 60–80g carbs at lunch post-run.',
+    notes:'Do NOT run hard. Zone 2 only — you should be able to hold a conversation. Heart rate 130–150bpm. Purpose is aerobic base and fat oxidation, not speed.',
+    pace:'5:30–6:30 /km', duration:'~28–35 min'
+  },
+  {
+    dow:5, label:'Saturday — Long Run', type:'long',
+    distance:'10–15km', effort:'Zone 2 with last 2km at Zone 3',
+    timing:'Morning preferred (8–10am). Full rest from gym.',
+    nutrition:'Eat 60–80g carbs 60 min before. Carry water for runs over 10km. Refuel with 2,900 kcal today — this replaces the weekly refeed.',
+    notes:'Build distance by 1km per week maximum. Current target: start at 10km, reach 15km by week 8. Long run is the most important session for fat oxidation — this is where you burn the most fat as fuel.',
+    pace:'5:30–7:00 /km', duration:'55–90 min'
+  }
+];
+
 // ══════════════════════════════════════
 // STATE
 // ══════════════════════════════════════
@@ -775,6 +825,7 @@ function freshState() {
   return {
     week:1, dow:0,
     sessions:[null,null,null,null,null],
+    runLogs:{},    // {dow: {done:bool, distance:num, time:num, notes:str}}
     setLogs:{},
     nutrition:{cal:0,protein:0,carbs:0,fat:0},
     weights:[],
@@ -793,6 +844,9 @@ var S = (function(){
   catch(e){ return freshState(); }
 })();
 
+// Ensure runLogs exists on old state
+if (!S.runLogs) S.runLogs = {};
+
 function save() {
   S.lastModified = new Date().toISOString();
   localStorage.setItem('apex_v5', JSON.stringify(S));
@@ -805,6 +859,7 @@ function save() {
 var gToken = null;
 var gUser  = null;
 var gSheetId = null;
+var gFolderId = null;
 var isOnline = navigator.onLine;
 var syncQueue = [];
 var pushDebounce = null;
@@ -816,6 +871,7 @@ function getClientId()  { return localStorage.getItem('apex_cid') || ''; }
 function getStoredToken(){ return localStorage.getItem('apex_gt') || ''; }
 function getTokenExp()  { return parseInt(localStorage.getItem('apex_gte') || '0'); }
 function getSheetIdLS() { return localStorage.getItem('apex_sid') || ''; }
+function getFolderIdLS(){ return localStorage.getItem('apex_fid') || ''; }
 
 // Wire buttons once DOM is ready
 document.getElementById('btnOffline').addEventListener('click', function(){ skipAuth(); });
@@ -992,12 +1048,77 @@ function promptSignOut() {
 }
 
 function openSheet() {
-  if (gSheetId) window.open('https://docs.google.com/spreadsheets/d/'+gSheetId,'_blank');
+  if (gSheetId) {
+    window.open('https://docs.google.com/spreadsheets/d/'+gSheetId, '_blank');
+  } else {
+    alert('Sheet not ready yet. Wait a few seconds after signing in and try again.');
+  }
 }
 
-// ══════════════════════════════════════
-// GOOGLE SHEETS SYNC
-// ══════════════════════════════════════
+function updateSheetLink() {
+  var el = document.getElementById('sheetLinkEl');
+  if (!el) return;
+  if (gSheetId) {
+    el.textContent = 'View your data sheet →';
+    el.style.opacity = '1';
+    el.style.cursor = 'pointer';
+  } else {
+    el.textContent = 'Creating sheet…';
+    el.style.opacity = '0.5';
+    el.style.cursor = 'default';
+  }
+}
+
+function findOrCreateSheet() {
+  if (gSheetId) { updateSheetLink(); return Promise.resolve(); }
+  var fid = getFolderIdLS();
+  if (fid) { gFolderId = fid; return findOrCreateSheetInFolder(); }
+  // Step 1: find or create the folder
+  return gFetch('https://www.googleapis.com/drive/v3/files?q=name%3D%27'+encodeURIComponent(FOLDER_NAME)+'%27+and+mimeType%3D%27application%2Fvnd.google-apps.folder%27+and+trashed%3Dfalse&fields=files(id)')
+    .then(function(r){
+      if (r.files && r.files.length > 0) {
+        gFolderId = r.files[0].id;
+        localStorage.setItem('apex_fid', gFolderId);
+        return;
+      }
+      return gFetch('https://www.googleapis.com/drive/v3/files', {method:'POST', body:JSON.stringify({
+        name: FOLDER_NAME,
+        mimeType: 'application/vnd.google-apps.folder'
+      })}).then(function(r){ gFolderId = r.id; localStorage.setItem('apex_fid', gFolderId); });
+    })
+    .then(function(){ return findOrCreateSheetInFolder(); })
+    .catch(function(e){ console.warn('Folder create failed, trying root:', e); return findOrCreateSheetInFolder(); });
+}
+
+function findOrCreateSheetInFolder() {
+  var q = 'name%3D%27'+encodeURIComponent(SHEET_NAME)+'%27+and+mimeType%3D%27application%2Fvnd.google-apps.spreadsheet%27+and+trashed%3Dfalse';
+  if (gFolderId) q += '+and+%27'+gFolderId+'%27+in+parents';
+  return gFetch('https://www.googleapis.com/drive/v3/files?q='+q+'&fields=files(id)')
+    .then(function(r){
+      if (r.files && r.files.length > 0) {
+        gSheetId = r.files[0].id;
+        localStorage.setItem('apex_sid', gSheetId);
+        updateSheetLink();
+        return;
+      }
+      var body = {
+        properties:{title:SHEET_NAME},
+        sheets:[{properties:{title:'State'}},{properties:{title:'WeightLog'}},{properties:{title:'SleepLog'}},{properties:{title:'RunLog'}},{properties:{title:'History'}}]
+      };
+      return gFetch('https://sheets.googleapis.com/v4/spreadsheets', {method:'POST', body:JSON.stringify(body)})
+        .then(function(r){
+          gSheetId = r.spreadsheetId;
+          localStorage.setItem('apex_sid', gSheetId);
+          updateSheetLink();
+          // Move into folder if we have one
+          if (gFolderId) {
+            return gFetch('https://www.googleapis.com/drive/v3/files/'+gSheetId+'?addParents='+gFolderId+'&fields=id', {method:'PATCH', body:JSON.stringify({})}).catch(function(){});
+          }
+        });
+    })
+    .catch(function(e){ console.warn('Sheet find/create failed:',e); });
+}
+
 function gFetch(url, opts) {
   opts = opts || {};
   var token = gToken || getStoredToken();
@@ -1011,17 +1132,6 @@ function gFetch(url, opts) {
   });
 }
 
-function findOrCreateSheet() {
-  if (gSheetId) return Promise.resolve();
-  return gFetch('https://www.googleapis.com/drive/v3/files?q=name%3D%27'+SHEET_NAME+'%27+and+mimeType%3D%27application%2Fvnd.google-apps.spreadsheet%27+and+trashed%3Dfalse&fields=files(id)&spaces=drive')
-    .then(function(r){
-      if (r.files && r.files.length > 0) { gSheetId=r.files[0].id; localStorage.setItem('apex_sid',gSheetId); return; }
-      return gFetch('https://sheets.googleapis.com/v4/spreadsheets', {method:'POST', body:JSON.stringify({
-        properties:{title:SHEET_NAME},
-        sheets:[{properties:{title:'State'}},{properties:{title:'WeightLog'}},{properties:{title:'SleepLog'}},{properties:{title:'History'}}]
-      })}).then(function(r){ gSheetId=r.spreadsheetId; localStorage.setItem('apex_sid',gSheetId); });
-    }).catch(function(e){ console.warn('Sheet find/create failed:',e); });
-}
 
 function pullAndMerge() {
   if (!gSheetId || !gToken) return Promise.resolve();
@@ -1235,8 +1345,74 @@ function renderProgFlag(si, ei) {
 }
 
 // ══════════════════════════════════════
-// SESSIONS
+// RUN SESSIONS
 // ══════════════════════════════════════
+function buildRunSessions() {
+  var list = document.getElementById('runSessionList');
+  if (!list) return;
+  list.innerHTML = '';
+  RUN_SESSIONS.forEach(function(run, ri) {
+    var log = S.runLogs[run.dow] || {};
+    var isDone = log.done === true;
+    var isMissed = log.done === false;
+    var wrap = document.createElement('div');
+    wrap.className = 'run-card';
+    wrap.innerHTML =
+      '<div class="run-hdr" onclick="togRunCard('+ri+')">'
+      +'<div>'
+      +'<div class="run-type">'+( run.type==='long' ? '🏃 LONG RUN' : '🏃 SHORT RUN' )+'</div>'
+      +'<div class="run-name">'+run.label+'</div>'
+      +'<div class="run-meta">'+run.distance+' · '+run.effort+'</div>'
+      +'</div>'
+      +'<div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px">'
+      +'<div class="sdot'+(isDone?' done':isMissed?' missed':'')+'" id="rdot-'+ri+'"></div>'
+      +'<div class="chev" id="rchev-'+ri+'">▾</div>'
+      +'</div>'
+      +'</div>'
+      +'<div class="run-body" id="rbody-'+ri+'">'
+      +'<div class="run-note-box">'+run.notes+'</div>'
+      +'<div class="run-stat-row">'
+      +'<div class="run-stat"><div class="run-stat-lbl">Distance</div><div class="run-stat-val green">'+run.distance+'</div></div>'
+      +'<div class="run-stat"><div class="run-stat-lbl">Duration</div><div class="run-stat-val">'+run.duration+'</div></div>'
+      +'<div class="run-stat"><div class="run-stat-lbl">Pace target</div><div class="run-stat-val">'+run.pace+'</div></div>'
+      +'<div class="run-stat"><div class="run-stat-lbl">Timing</div><div class="run-stat-val" style="font-size:11px">'+run.timing.split('.')[0]+'</div></div>'
+      +'</div>'
+      +'<div style="font-family:var(--fm);font-size:9px;color:var(--muted);margin-bottom:8px;line-height:1.5">🍌 '+run.nutrition+'</div>'
+      +'<div class="run-log-grid">'
+      +'<div class="ig"><div class="il">Actual distance (km)</div><input type="number" id="rdist-'+ri+'" placeholder="'+run.distance.split('–')[0]+'" step="0.1" min="0" value="'+(log.distance||'')+'"></div>'
+      +'<div class="ig"><div class="il">Time (min)</div><input type="number" id="rtime-'+ri+'" placeholder="30" step="1" min="0" value="'+(log.time||'')+'"></div>'
+      +'</div>'
+      +'<button class="run-done-btn'+(isDone?' completed':'')+'" onclick="logRun('+ri+',true)">'+(isDone?'✓ Completed':'✓ Log Run as Done')+'</button>'
+      +'<button class="run-miss-btn" onclick="logRun('+ri+',false)">✗ Missed</button>'
+      +'</div>';
+    list.appendChild(wrap);
+  });
+}
+
+function togRunCard(ri) {
+  var body = document.getElementById('rbody-'+ri);
+  var chev = document.getElementById('rchev-'+ri);
+  var open = body.classList.contains('open');
+  // Close all run cards
+  RUN_SESSIONS.forEach(function(_,i){
+    var b=document.getElementById('rbody-'+i), c=document.getElementById('rchev-'+i);
+    if(b){b.classList.remove('open');} if(c){c.classList.remove('open');c.textContent='▾';}
+  });
+  if (!open) { body.classList.add('open'); chev.classList.add('open'); chev.textContent='▴'; }
+}
+
+function logRun(ri, done) {
+  var run = RUN_SESSIONS[ri];
+  var dist = parseFloat(document.getElementById('rdist-'+ri).value) || null;
+  var time = parseFloat(document.getElementById('rtime-'+ri).value) || null;
+  S.runLogs[run.dow] = {done:done, distance:dist, time:time, type:run.type};
+  save();
+  buildRunSessions(); // rebuild to update button states
+  updateWeekGrid();
+  if (navigator.vibrate && done) navigator.vibrate(60);
+}
+
+
 function buildSessions() {
   var list = document.getElementById('sessionList');
   list.innerHTML = '';
@@ -1312,6 +1488,26 @@ function updSet(si, ei, sti, field, val) {
 function togSet(si, ei, sti) {
   var k = si+'_'+ei;
   var st = S.setLogs[k][sti];
+
+  // If trying to mark as done, validate inputs first
+  if (!st.done) {
+    var kg   = parseFloat(st.kg);
+    var reps = parseInt(st.reps);
+    if (!kg || kg <= 0 || !reps || reps <= 0) {
+      // Flash the inputs red briefly
+      var row = document.getElementById('sr-'+si+'-'+ei+'-'+sti);
+      if (row) {
+        var inps = row.querySelectorAll('.set-inp');
+        inps.forEach(function(inp){
+          inp.style.borderColor = 'var(--red)';
+          setTimeout(function(){ inp.style.borderColor = ''; }, 1200);
+        });
+      }
+      if (navigator.vibrate) navigator.vibrate([30,30,30]);
+      return; // Block the toggle
+    }
+  }
+
   st.done = !st.done; save();
   var row = document.getElementById('sr-'+si+'-'+ei+'-'+sti);
   var inps = row.querySelectorAll('.set-inp');
@@ -1359,16 +1555,25 @@ function updateWeekGrid() {
   DAY_LABELS.forEach(function(lbl, i){
     var div = document.createElement('div');
     div.className = 'dp';
-    var isTrain = TRAIN_DAYS.indexOf(i) !== -1;
-    var si = TRAIN_DAYS.indexOf(i);
-    var st = isTrain ? S.sessions[si] : null;
-    var isCycle = (S.cyclingDays||[]).indexOf(i) !== -1;
-    var isToday = i === S.dow;
+    var isTrain  = TRAIN_DAYS.indexOf(i) !== -1;
+    var isRun    = RUN_DAYS.indexOf(i) !== -1;
+    var si       = TRAIN_DAYS.indexOf(i);
+    var ri       = RUN_DAYS.indexOf(i);
+    var st       = isTrain ? S.sessions[si] : null;
+    var runLog   = isRun   ? (S.runLogs[i] || null) : null;
+    var isCycle  = (S.cyclingDays||[]).indexOf(i) !== -1;
+    var isToday  = i === S.dow;
+
     if (st==='done') div.classList.add('done-d');
     else if (st==='missed') div.classList.add('miss-d');
+    else if (runLog && runLog.done===true) div.classList.add('done-d');
+    else if (runLog && runLog.done===false) div.classList.add('miss-d');
     else if (isCycle) div.classList.add('cycle-d');
+    else if (isTrain && isRun) { div.classList.add('training'); div.style.borderColor='rgba(62,255,170,.3)'; }
     else if (isTrain) div.classList.add('training');
-    var ico = st==='done'?'✓':st==='missed'?'✗':isCycle?'🚴':isTrain?'●':'–';
+    else if (isRun) { div.style.borderColor='rgba(62,255,170,.2)'; div.style.color='var(--green)'; }
+
+    var ico = st==='done'?'✓':st==='missed'?'✗':(runLog&&runLog.done===true)?'✓':(runLog&&runLog.done===false)?'✗':isCycle?'🚴':isTrain&&isRun?'🏃':isTrain?'●':isRun?'🏃':'–';
     div.innerHTML = '<div class="dpi">'+ico+'</div>'+lbl;
     if (isToday && !st) div.classList.add('today');
     if (!isTrain) {
@@ -1564,7 +1769,7 @@ function nextDay() {
     S.nutrition={cal:0,protein:0,carbs:0,fat:0};
     S.meals=[false,false,false,false,false];
     S.supps=[false,false,false,false,false];
-    S.setLogs={}; S.cyclingDays=[];
+    S.setLogs={}; S.runLogs={}; S.cyclingDays=[];
   }
   save(); renderAll();
 }
@@ -1575,7 +1780,7 @@ function confirmReset() {
   S.nutrition={cal:0,protein:0,carbs:0,fat:0};
   S.meals=[false,false,false,false,false];
   S.supps=[false,false,false,false,false];
-  S.setLogs={}; S.dow=0; S.cyclingDays=[];
+  S.setLogs={}; S.runLogs={}; S.dow=0; S.cyclingDays=[];
   save(); renderAll();
 }
 
@@ -1727,6 +1932,7 @@ document.querySelectorAll('.modal-overlay').forEach(function(o){
 // RENDER ALL
 // ══════════════════════════════════════
 function renderAll() {
+  buildRunSessions();
   buildSessions();
   updateWeekGrid();
   updateRecovery();
@@ -1739,6 +1945,7 @@ function renderAll() {
   restoreToggles();
   updateApiAlert();
   updateGoogleUI();
+  updateSheetLink();
   var k = getApiKey();
   if (k) { document.getElementById('apiKeyIn').value=k; document.getElementById('apiStatus').textContent='✓ Key loaded'; document.getElementById('apiStatus').style.color='var(--green)'; }
   var cid = getClientId();
