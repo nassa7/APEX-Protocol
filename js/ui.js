@@ -117,7 +117,7 @@ function togMeal(i) {
 // ══════════════════════════════════════
 // TABS / BOTTOM NAV
 // ══════════════════════════════════════
-var TAB_ORDER = ['dashboard','training','nutrition','sleep','settings'];
+var TAB_ORDER = ['dashboard','training','nutrition','sleep','coach','settings'];
 
 function swTab(name, btn) {
   document.querySelectorAll('.panel').forEach(function(p){ p.classList.remove('on'); });

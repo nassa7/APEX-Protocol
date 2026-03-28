@@ -64,6 +64,9 @@
   <button class="tab" data-panel="sleep" onclick="swTab('sleep',this)">
     <span class="bnav-ico">🌙</span><span class="bnav-lbl">Sleep</span>
   </button>
+  <button class="tab" data-panel="coach" onclick="swTab('coach',this)">
+    <span class="bnav-ico">🤖</span><span class="bnav-lbl">Coach</span>
+  </button>
   <button class="tab" data-panel="settings" onclick="swTab('settings',this)">
     <span class="bnav-ico">⚙️</span><span class="bnav-lbl">Setup</span>
   </button>
@@ -319,6 +322,25 @@
   </div>
 </div>
 
+<!-- COACH -->
+<div class="panel" id="panel-coach">
+  <div class="coach-header">
+    <div>
+      <div style="font-size:18px;font-weight:800;letter-spacing:-.3px">APEX Coach <span style="font-size:13px;color:var(--accent);font-weight:400">AI</span></div>
+      <div style="font-family:var(--fm);font-size:9px;color:var(--muted);margin-top:2px">Expert in training · nutrition · sleep · recovery</div>
+    </div>
+    <button class="btn-outline" style="padding:6px 12px;font-size:10px;width:auto" onclick="clearCoachHistory()">Clear chat</button>
+  </div>
+  <div class="coach-messages" id="coachMessages"></div>
+  <div class="coach-input-wrap">
+    <textarea id="coachInput" class="coach-textarea" placeholder="Ask anything — e.g. 'add more chest volume', 'what weight for bench press?', 'my shoulders are tired'" rows="1"></textarea>
+    <button class="coach-send" onclick="sendCoachMessage()">↑</button>
+  </div>
+  <div style="text-align:center;margin-top:8px;padding:0 0 4px">
+    <span style="font-family:var(--fm);font-size:9px;color:var(--muted);cursor:pointer" onclick="resetToDefaultProgram()">↺ Reset to default program</span>
+  </div>
+</div>
+
 <!-- SETTINGS -->
 <div class="panel" id="panel-settings">
   <div class="card t-blue">
@@ -517,6 +539,7 @@
 <script src="js/ai.js"></script>
 <script src="js/charts.js"></script>
 <script src="js/gamification.js"></script>
+<script src="js/coach.js"></script>
 <script src="js/init.js"></script>
 <script>
   if ('serviceWorker' in navigator) {

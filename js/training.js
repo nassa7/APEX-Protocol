@@ -59,7 +59,8 @@ function skipRest() {
 function calcVolumes() {
   var vols = {};
   MUSCLE_GROUPS.forEach(function(mg){ vols[mg.key]=0; });
-  SESSIONS_DEF.forEach(function(sess,si){
+  var _activeSess = typeof getActiveSessions === 'function' ? getActiveSessions() : SESSIONS_DEF;
+  _activeSess.forEach(function(sess,si){
     if (S.sessions[si] !== 'done') return;
     sess.exercises.forEach(function(ex,ei){
       if (!ex.muscles || !ex.muscles.length) return;
@@ -227,7 +228,8 @@ function buildSessions() {
   var lastH = (S.history||[]).slice(-1)[0];
   if (lastH && lastH.setLogs) lastWeekLogs = lastH.setLogs;
 
-  SESSIONS_DEF.forEach(function(sess, si){
+  var activeSessions = typeof getActiveSessions === 'function' ? getActiveSessions() : SESSIONS_DEF;
+  activeSessions.forEach(function(sess, si){
     var status = S.sessions[si];
     var isToday = si === todaySi;
     var exHtml = '';

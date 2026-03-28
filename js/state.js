@@ -26,7 +26,9 @@ function freshState() {
     achievements:[], personalBests:{}, pbCount:0,
     sessionNotes:{}, sessionTimers:{},
     checkIn:null, lastRecapSeen:null,
-    sleepDefaults:null
+    sleepDefaults:null,
+    // AI Coach
+    coachHistory:[], customSessions:null, weekOverrides:null
   };
 }
 
@@ -51,6 +53,9 @@ if (!S.sessionTimers) S.sessionTimers = {};
 if (!S.checkIn) S.checkIn = null;
 if (!S.lastRecapSeen) S.lastRecapSeen = null;
 if (S.sleepDefaults === undefined) S.sleepDefaults = null;
+if (!S.coachHistory) S.coachHistory = [];
+if (S.customSessions === undefined) S.customSessions = null;
+if (S.weekOverrides === undefined) S.weekOverrides = null;
 if (!S.nutritionByDate) {
   S.nutritionByDate = {};
   if (S.nutrition && (S.nutrition.cal || S.nutrition.protein)) {
@@ -105,6 +110,7 @@ function checkWeekRollover() {
     S.setLogs = {}; S.runLogs = {}; S.cyclingDays = [];
     S.sessionNotes = {}; S.sessionTimers = {};
     S.weeklyXP = 0;
+    S.weekOverrides = null; // clear week-only overrides on rollover
     save();
     rolloverCallbacks.forEach(function(fn){ fn(prevSessions); });
   }
