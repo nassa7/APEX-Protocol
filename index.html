@@ -358,6 +358,17 @@
   </div>
 
   <div class="card">
+    <div class="lbl">Notifications</div>
+    <div class="tog-item">
+      <div class="tog-info">
+        <div class="tog-name">Daily Sleep Reminder</div>
+        <div class="tog-sub">Notification at 10:30pm to log sleep</div>
+      </div>
+      <div class="tog" id="notifTog" onclick="toggleNotifReminder()"></div>
+    </div>
+  </div>
+
+  <div class="card">
     <div class="lbl">Anthropic API Key</div>
     <p class="sm mut" style="margin-bottom:11px;line-height:1.65">For AI weekly analysis. Stored only in localStorage. Set a £5/mo spend cap at console.anthropic.com.</p>
     <div class="ig" style="margin-bottom:11px"><div class="il">API Key</div><input type="password" id="apiKeyIn" placeholder="sk-ant-..."></div>
@@ -507,5 +518,10 @@
 <script src="js/charts.js"></script>
 <script src="js/gamification.js"></script>
 <script src="js/init.js"></script>
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js').catch(function(){});
+  }
+</script>
 </body>
 </html>
