@@ -8,6 +8,7 @@ var XP_VALUES = {
   PB:50, ALL_SESSIONS:200, CHECKIN:10,
   GRADE_A:100, GRADE_B:50, ACHIEVEMENT:75
 };
+var XP_WEEKLY_CAP = 600;
 
 function awardXP(amount, reason) {
   if (!S.weeklyXP) S.weeklyXP = 0;
@@ -23,7 +24,7 @@ function updateXPDisplay() {
   var bar = document.getElementById('xpBarFill');
   var lbl = document.getElementById('xpLabel');
   var xp  = S.weeklyXP || 0;
-  var pct = Math.min((xp / 600) * 100, 100);
+  var pct = Math.min((xp / XP_WEEKLY_CAP) * 100, 100);
   if (bar) bar.style.width = pct + '%';
   if (lbl) lbl.textContent = xp + ' XP';
 }
@@ -63,7 +64,7 @@ function renderGradeCard() {
   var xp     = S.weeklyXP || 0;
   var streak = S.streak   || 0;
   var color  = gradeColor(grade);
-  var pct    = Math.min((xp / 600) * 100, 100);
+  var pct    = Math.min((xp / XP_WEEKLY_CAP) * 100, 100);
   var gradeMsg = {A:'Outstanding 🔥',B:'Solid week 💪',C:'Keep going 📈',D:'Start now 🆕'}[grade];
 
   el.innerHTML =
@@ -72,7 +73,7 @@ function renderGradeCard() {
     +'<div style="font-family:var(--fm);font-size:8px;color:var(--muted);letter-spacing:2px;font-weight:400;margin-top:2px">'+gradeMsg+'</div>'
     +'</div>'
     +'<div class="grade-right">'
-    +'<div class="grade-xp-row"><span id="xpLabel" style="font-family:var(--fm);font-size:10px;color:var(--accent)">'+xp+' XP</span><span style="font-family:var(--fm);font-size:9px;color:var(--muted)">/ 600</span></div>'
+    +'<div class="grade-xp-row"><span id="xpLabel" style="font-family:var(--fm);font-size:10px;color:var(--accent)">'+xp+' XP</span><span style="font-family:var(--fm);font-size:9px;color:var(--muted)">/ '+XP_WEEKLY_CAP+'</span></div>'
     +'<div class="xp-track"><div id="xpBarFill" class="xp-fill" style="width:'+pct+'%"></div></div>'
     +'<div class="grade-stats">'
     +'<div class="grade-stat"><div class="grade-stat-ico">🔥</div><div class="grade-stat-val" style="color:var(--orange)">'+streak+'</div><div class="grade-stat-lbl">Streak</div></div>'
@@ -214,14 +215,16 @@ function renderPBCard() {
   var pbs  = S.personalBests || {};
   var keys = Object.keys(pbs);
   if (!keys.length) {
-    el.innerHTML = '<div style="font-family:var(--fm);font-size:10px;color:var(--muted);padding:10px 0;text-align:center">Log sets to track personal bests 💪</div>';
+    el.innerHTML = '<div style="font-family:var(--fm);font-size:10px;color:var(--muted);padding:10px 0;text-align:center">No PBs yet — head to <span style="color:var(--accent);cursor:pointer" onclick="swTab(\'training\',null)">Training ↗</span> and log sets to earn them 💪</div>';
     return;
   }
   keys.sort(function(a,b){ return (pbs[b].date||'') > (pbs[a].date||'') ? 1 : -1; });
   el.innerHTML = keys.slice(0,8).map(function(k){
     var pb = pbs[k];
+    var orm = Math.round(pb.kg * (1 + pb.reps / 30));
+    var ormStr = pb.reps > 1 ? '<div class="pb-meta" style="color:var(--blue);margin-top:1px">~e1RM: '+orm+'kg</div>' : '';
     return '<div class="pb-row">'
-      +'<div style="flex:1"><div class="pb-name">'+pb.name+'</div><div class="pb-meta">Wk '+pb.week+' · '+pb.date+'</div></div>'
+      +'<div style="flex:1"><div class="pb-name">'+pb.name+'</div><div class="pb-meta">Wk '+pb.week+' · '+pb.date+'</div>'+ormStr+'</div>'
       +'<div class="pb-val">'+pb.kg+'<span>kg</span> × '+pb.reps+'<span>reps</span></div>'
       +'</div>';
   }).join('');
@@ -437,6 +440,61 @@ function buildAndShowRecap(h) {
     +'<div style="font-family:var(--fm);font-size:10px;color:var(--muted);text-align:center">Week '+(h.week+1)+' starts now. Keep the momentum. 💪</div>';
 
   openModal('modalRecap');
+}
+
+// ══════════════════════════════════════
+// NOTIFICATION REMINDERS
+// ══════════════════════════════════════
+var _notifTimer = null;
+
+function toggleNotifReminder() {
+  var tog = document.getElementById('notifTog');
+  var enabled = localStorage.getItem('apex_notif') === '1';
+  if (enabled) {
+    localStorage.removeItem('apex_notif');
+    if (tog) tog.classList.remove('on');
+    if (_notifTimer) { clearTimeout(_notifTimer); _notifTimer = null; }
+    showToast('🔕', 'Reminders off', 'Sleep reminder disabled', 'info', 2000);
+  } else {
+    if (!('Notification' in window)) {
+      showToast('⚠️', 'Not supported', 'Notifications not available in this browser', 'warn'); return;
+    }
+    Notification.requestPermission().then(function(perm) {
+      if (perm === 'granted') {
+        localStorage.setItem('apex_notif', '1');
+        if (tog) tog.classList.add('on');
+        scheduleSleepNotif();
+        showToast('🔔', 'Reminder set', 'Sleep reminder at 10:30pm daily', 'success', 2500);
+      } else {
+        showToast('⚠️', 'Permission denied', 'Allow notifications in browser settings', 'warn', 3000);
+      }
+    });
+  }
+}
+
+function scheduleSleepNotif() {
+  if (localStorage.getItem('apex_notif') !== '1') return;
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  if (_notifTimer) clearTimeout(_notifTimer);
+  var now = new Date();
+  var target = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 22, 30, 0);
+  if (target <= now) target.setDate(target.getDate() + 1);
+  var msUntil = target - now;
+  _notifTimer = setTimeout(function() {
+    new Notification('APEX Protocol 🌙', {
+      body: "Don't forget to log your sleep tonight. Tap to open.",
+      icon: 'manifest.json',
+      tag: 'apex-sleep-reminder'
+    });
+    scheduleSleepNotif(); // reschedule for tomorrow
+  }, msUntil);
+}
+
+function initNotifToggle() {
+  var tog = document.getElementById('notifTog');
+  var enabled = localStorage.getItem('apex_notif') === '1';
+  if (tog) tog.classList.toggle('on', enabled);
+  if (enabled) scheduleSleepNotif();
 }
 
 // ══════════════════════════════════════

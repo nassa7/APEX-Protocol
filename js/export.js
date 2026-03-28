@@ -10,7 +10,7 @@ function buildExport() {
     avgSleep = (sl.reduce(function(a,e){ return a+e.hrs; },0)/sl.length).toFixed(2);
   }
   return {
-    meta:{user:'Hassan',exportDate:new Date().toISOString(),week:S.week,day:S.dow+1},
+    meta:{user:'Hassan',exportDate:new Date().toISOString(),week:S.week,day:realDow()+1},
     training:{
       completionRate:Math.round((S.sessions.filter(function(s){ return s==='done'; }).length/5)*100)+'%',
       completed:S.sessions.filter(function(s){ return s==='done'; }).length,
@@ -36,8 +36,11 @@ function buildExport() {
     sleep:{avgLast7Nights_hrs:avgSleep,targetNightly_hrs:SLEEP_TARGET,
       weeklyDebt_hrs:avgSleep?Math.max(0,(SLEEP_TARGET-parseFloat(avgSleep))*7).toFixed(1):null,
       log:(S.sleepLog||[]).slice(0,7)},
-    biometrics:{latestWeight_kg:S.weights[0]?S.weights[0].val:null,startWeight_kg:84,
-      totalChange_kg:S.weights[0]?(S.weights[0].val-84).toFixed(1):'0',weightLog:S.weights.slice(0,7)},
+    biometrics:(function(){
+      var startW = S.weights.length ? S.weights[S.weights.length-1].val : null;
+      return {latestWeight_kg:S.weights[0]?S.weights[0].val:null,startWeight_kg:startW,
+        totalChange_kg:(S.weights[0]&&startW)?(S.weights[0].val-startW).toFixed(1):'0',weightLog:S.weights.slice(0,7)};
+    })(),
     history:(S.history||[]).slice(-4)
   };
 }

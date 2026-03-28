@@ -25,7 +25,8 @@ function freshState() {
     streak:0, totalXP:0, weeklyXP:0,
     achievements:[], personalBests:{}, pbCount:0,
     sessionNotes:{}, sessionTimers:{},
-    checkIn:null, lastRecapSeen:null
+    checkIn:null, lastRecapSeen:null,
+    sleepDefaults:null
   };
 }
 
@@ -49,6 +50,7 @@ if (!S.sessionNotes) S.sessionNotes = {};
 if (!S.sessionTimers) S.sessionTimers = {};
 if (!S.checkIn) S.checkIn = null;
 if (!S.lastRecapSeen) S.lastRecapSeen = null;
+if (S.sleepDefaults === undefined) S.sleepDefaults = null;
 if (!S.nutritionByDate) {
   S.nutritionByDate = {};
   if (S.nutrition && (S.nutrition.cal || S.nutrition.protein)) {

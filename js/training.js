@@ -271,7 +271,7 @@ function buildSessions() {
 
     var wrap = document.createElement('div');
     wrap.className = 'sc-wrap';
-    if (isToday && status===null) wrap.style.borderColor = 'rgba(245,166,35,.4)';
+    if (isToday && status===null) wrap.style.borderColor = 'rgba(56,189,248,.4)';
 
     var timerVal = '';
     var existTimer = S.sessionTimers && S.sessionTimers[si];

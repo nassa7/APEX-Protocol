@@ -1,6 +1,58 @@
 'use strict';
 
 // ══════════════════════════════════════
+// SPARKLINES
+// ══════════════════════════════════════
+function makeSpark(vals, color) {
+  if (!vals || vals.length < 2) return '';
+  var W = 60, H = 24, pad = 2;
+  var min = Math.min.apply(null, vals), max = Math.max.apply(null, vals);
+  var range = max - min || 1;
+  var pts = vals.map(function(v, i) {
+    var x = pad + (i / (vals.length - 1)) * (W - pad * 2);
+    var y = H - pad - ((v - min) / range) * (H - pad * 2);
+    return x.toFixed(1) + ',' + y.toFixed(1);
+  }).join(' ');
+  return '<svg class="sparkline" width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'">'
+    +'<polyline points="'+pts+'" fill="none" stroke="'+color+'" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>'
+    +'</svg>';
+}
+
+function renderSparklines() {
+  // Weight sparkline
+  var wEl = document.getElementById('wtVal');
+  if (wEl && S.weights.length >= 2) {
+    var sc = wEl.closest('.sc');
+    if (sc) {
+      var old = sc.querySelector('.sparkline'); if (old) old.remove();
+      var vals = S.weights.slice(0, 7).map(function(w){ return w.val; }).reverse();
+      sc.insertAdjacentHTML('beforeend', makeSpark(vals, 'var(--accent)'));
+    }
+  }
+  // Sleep sparkline
+  var slEl = document.getElementById('dashSleep');
+  if (slEl && S.sleepLog && S.sleepLog.length >= 2) {
+    var sc2 = slEl.closest('.sc');
+    if (sc2) {
+      var old2 = sc2.querySelector('.sparkline'); if (old2) old2.remove();
+      var vals2 = S.sleepLog.slice(0, 7).map(function(e){ return e.hrs; }).reverse();
+      sc2.insertAdjacentHTML('beforeend', makeSpark(vals2, 'var(--purple)'));
+    }
+  }
+  // Protein sparkline
+  var protEl = document.getElementById('dashProt');
+  if (protEl) {
+    var sc3 = protEl.closest('.sc');
+    var nutrDates = Object.keys(S.nutritionByDate || {}).sort();
+    if (sc3 && nutrDates.length >= 2) {
+      var old3 = sc3.querySelector('.sparkline'); if (old3) old3.remove();
+      var vals3 = nutrDates.slice(-7).map(function(d){ return S.nutritionByDate[d].protein || 0; });
+      sc3.insertAdjacentHTML('beforeend', makeSpark(vals3, 'var(--protein)'));
+    }
+  }
+}
+
+// ══════════════════════════════════════
 // WEEK GRID
 // ══════════════════════════════════════
 function updateWeekGrid() {
@@ -75,6 +127,17 @@ function updateSessCount() {
 // ══════════════════════════════════════
 // NUTRITION
 // ══════════════════════════════════════
+function flashInvalid(id) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  el.style.borderColor = 'var(--red)';
+  el.style.boxShadow = '0 0 0 2px rgba(248,113,113,.2)';
+  setTimeout(function(){
+    el.style.borderColor = '';
+    el.style.boxShadow = '';
+  }, 1400);
+}
+
 function logNutrition() {
   var btn = document.querySelector('[onclick="logNutrition()"]');
   var cal  = parseFloat(document.getElementById('nCal').value)  || 0;
@@ -84,6 +147,12 @@ function logNutrition() {
   if (!cal && !prot && !carb && !fat) {
     showToast('⚠️','Nothing to log','Enter at least one value','warn'); return;
   }
+  var invalid = false;
+  if (cal  > 6000) { flashInvalid('nCal');  showToast('⚠️','Too many calories','Max 6,000 kcal per entry','warn'); invalid=true; }
+  if (prot > 400)  { flashInvalid('nProt'); showToast('⚠️','Protein too high','Max 400g per entry','warn'); invalid=true; }
+  if (carb > 700)  { flashInvalid('nCarb'); showToast('⚠️','Carbs too high','Max 700g per entry','warn'); invalid=true; }
+  if (fat  > 300)  { flashInvalid('nFat');  showToast('⚠️','Fat too high','Max 300g per entry','warn'); invalid=true; }
+  if (invalid) return;
   lockBtn(btn);
   var n = todayNutr();
   n.cal += cal; n.protein += prot; n.carbs += carb; n.fat += fat;
@@ -161,7 +230,11 @@ function logWeight() {
 }
 
 function updateWeightUI() {
-  if (!S.weights.length) return;
+  if (!S.weights.length) {
+    var log = document.getElementById('wtLog');
+    if (log) log.innerHTML = '<div style="font-family:var(--fm);font-size:10px;color:var(--muted);padding:8px 0;text-align:center">Log your first weight above ↑</div>';
+    return;
+  }
   var latest = S.weights[0].val;
   var baseline = S.weights[S.weights.length-1].val;
   var delta = (latest - baseline).toFixed(1);
@@ -202,6 +275,7 @@ function logSleep() {
   if (isUpdate) S.sleepLog.splice(existIdx, 1);
   S.sleepLog.unshift({date:todayDate, bed:bed, wake:wake, hrs:hrsRounded, quality:q});
   if (S.sleepLog.length>60) S.sleepLog = S.sleepLog.slice(0,60);
+  S.sleepDefaults = {bed:bed, wake:wake};
   save(); updateSleepUI();
   var h=Math.floor(hrsRounded), m=Math.round((hrsRounded-h)*60);
   showToast('😴', isUpdate?'Sleep updated':'Sleep logged',
@@ -249,6 +323,14 @@ function updateSleepUI() {
     document.getElementById('sleepSubLbl').textContent = 'HRS LOGGED';
     var ql3 = document.getElementById('sleepQuality');
     ql3.textContent = 'LOG SLEEP'; ql3.style.color = 'var(--muted)';
+  }
+
+  // Pre-populate sleep inputs from last used values
+  if (S.sleepDefaults) {
+    var bedIn = document.getElementById('sleepBed');
+    var wakeIn = document.getElementById('sleepWake');
+    if (bedIn && !bedIn.value) bedIn.value = S.sleepDefaults.bed;
+    if (wakeIn && !wakeIn.value) wakeIn.value = S.sleepDefaults.wake;
   }
 
   if (hasAnyLog) {
@@ -388,3 +470,19 @@ function confirmFullReset() {
   if (!confirm('Are you absolutely sure?')) return;
   S = freshState(); save(); renderAll();
 }
+
+// ══════════════════════════════════════
+// ENTER KEY SUBMIT HANDLERS
+// ══════════════════════════════════════
+document.addEventListener('DOMContentLoaded', function() {
+  function onEnter(id, fn) {
+    var el = document.getElementById(id);
+    if (el) el.addEventListener('keydown', function(e){ if (e.key==='Enter') fn(); });
+  }
+  onEnter('wtIn', logWeight);
+  onEnter('nCal',  logNutrition);
+  onEnter('nProt', logNutrition);
+  onEnter('nCarb', logNutrition);
+  onEnter('nFat',  logNutrition);
+  onEnter('sleepWake', logSleep);
+});

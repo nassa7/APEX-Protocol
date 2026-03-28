@@ -36,6 +36,8 @@ function renderAll() {
   if (typeof renderAchievements==='function') renderAchievements();
   if (typeof renderPBCard      ==='function') renderPBCard();
   if (typeof updateFocusCard   ==='function') updateFocusCard();
+  if (typeof initNotifToggle   ==='function') initNotifToggle();
+  if (typeof renderSparklines  ==='function') renderSparklines();
   var k = getApiKey();
   if (k) { document.getElementById('apiKeyIn').value=k; document.getElementById('apiStatus').textContent='✓ Key loaded'; document.getElementById('apiStatus').style.color='var(--green)'; }
   var cid = getClientId();
